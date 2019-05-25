@@ -47,7 +47,8 @@ class H(BaseHTTPRequestHandler):
 
     def get_entry_html(self, e):
         return '''<p>''' + e.label + '''</p><form action="/update_entry/''' + e.id + '''" method="post">
-            <input type="checkbox" name="done" ''' + ('checked' if e.done else '') + '''>
+            <input type="checkbox" name="done" ''' + ('checked'
+                                                      if e.done else '') + '''>
             <input type="submit" value="Submit">
         </form><form action="/delete_entry/''' + e.id + '''" method="post">
             <input type="submit" value="Delete">
@@ -65,11 +66,19 @@ class H(BaseHTTPRequestHandler):
                     <body>
                         <h1>Logged in as ''' + str(user.username) + '''</h1>
                     </body>
-                    <ul>''' +
-                      ''.join(['<li>' + self.get_entry_html(e) + '</li>'
-                               for e in user.entries.values()]) + '''</ul>
+                    <ul>''' + ''.join([
+                    '<li>' + self.get_entry_html(e) + '</li>'
+                    for e in user.entries.values()
+                ]) + '''</ul>
+                    <h2>New entry</h2>
                     <form action="/new_entry" method="post">
                         <input type="text" name="label">
+                        <input type="submit" value="Submit">
+                    </form> 
+                    <h2>Reset password</h2>
+                    <form action="/reset_password" method="post">
+                        <input type="password" name="password">
+                        <input type="password" name="new_password">
                         <input type="submit" value="Submit">
                     </form> 
                 </html>
@@ -86,13 +95,13 @@ class H(BaseHTTPRequestHandler):
                     <h2>Login</h2>
                     <form action="/login" method="post">
                         <input type="text" name="username">
-                        <input type="text" name="password">
+                        <input type="password" name="password">
                         <input type="submit" value="Submit">
                     </form> 
                     <h2>Signup</h2>
                     <form action="/signup" method="post">
                         <input type="text" name="username">
-                        <input type="text" name="password">
+                        <input type="password" name="password">
                         <input type="submit" value="Submit">
                     </form> 
                 </body>
@@ -152,6 +161,20 @@ class H(BaseHTTPRequestHandler):
                 users[username] = User(username, pass_hash)
                 self.create_session_go_home(users[username])
                 return
+        elif self.path == '/reset_password':
+            user = self.get_auth_user()
+            password = body[b'password'][0].decode('utf-8')
+            new_password = body[b'new_password'][0].decode('utf-8')
+            if user:
+                if pbkdf2_sha256.verify(password, user.pass_hash):
+                    user.pass_hash = pbkdf2_sha256.encrypt(
+                        new_password, rounds=200000, salt_size=16)
+                    user.sessions = []
+                else:
+                    self.send_response(401)
+                    self.end_headers()
+                    self.wfile.write(b'Password incorrect')
+                    return
         elif self.path == '/new_entry':
             user = self.get_auth_user()
             if user:
