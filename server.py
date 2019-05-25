@@ -7,25 +7,31 @@ from passlib.hash import pbkdf2_sha256
 
 import secrets
 import time
+import uuid
 
 users = {}
 
 
+class Entry:
+    def __init__(self, id, label, done=False):
+        self.id = id
+        self.label = label
+        self.done = done
+
+
 class User:
-    def __init__(self,
-                 username,
-                 pass_hash,
-                 sessions=[]):
+    def __init__(self, username, pass_hash, sessions=[]):
         self.username = username
         self.pass_hash = pass_hash
-        self.sessions = [] # TODO: Use expiry
+        self.sessions = []  # TODO: Use expiry
+        self.entries = {}
 
 
 class H(BaseHTTPRequestHandler):
     def __init__(self, *args, **kwargs):
         super(H, self).__init__(*args, **kwargs)
 
-    def do_GET(self):
+    def get_auth_user(self):
         cookies = SimpleCookie(self.headers.get('Cookie'))
         if 'username' in cookies and 'session_token' in cookies:
             username = cookies['username'].value
@@ -33,23 +39,46 @@ class H(BaseHTTPRequestHandler):
             if username in users:
                 user = users[username]
                 timestamp = time.time()
-                if session_token in [s[0] for s in user.sessions if s[1] > timestamp]:
-                    self.send_response(200)
-                    self.end_headers()
-                    self.wfile.write(
-                        bytes("""
-                        <html>
-                            <head><title>TD</title></head>
-                            <body>
-                                <h1>Logged in as """ + str(username) + """</h1>
-                            </body>
-                        </html>
-                    """, 'utf-8'))
-                    return
+                if session_token in [
+                        s[0] for s in user.sessions if s[1] > timestamp
+                ]:
+                    return user
+        return None
+
+    def get_entry_html(self, e):
+        return '''<p>''' + e.label + '''</p><form action="/update_entry/''' + e.id + '''" method="post">
+            <input type="checkbox" name="done" ''' + ('checked' if e.done else '') + '''>
+            <input type="submit" value="Submit">
+        </form><form action="/delete_entry/''' + e.id + '''" method="post">
+            <input type="submit" value="Delete">
+        </form>'''
+
+    def do_GET(self):
+        user = self.get_auth_user()
+        if user:
+            self.send_response(200)
+            self.end_headers()
+            self.wfile.write(
+                bytes('''
+                <html>
+                    <head><title>TD</title></head>
+                    <body>
+                        <h1>Logged in as ''' + str(user.username) + '''</h1>
+                    </body>
+                    <ul>''' +
+                      ''.join(['<li>' + self.get_entry_html(e) + '</li>'
+                               for e in user.entries.values()]) + '''</ul>
+                    <form action="/new_entry" method="post">
+                        <input type="text" name="label">
+                        <input type="submit" value="Submit">
+                    </form> 
+                </html>
+            ''', 'utf-8'))
+            return
 
         self.send_response(200)
         self.end_headers()
-        self.wfile.write(b"""
+        self.wfile.write(b'''
             <html>
                 <head><title>TD</title></head>
                 <body>
@@ -68,7 +97,7 @@ class H(BaseHTTPRequestHandler):
                     </form> 
                 </body>
             </html>
-        """)
+        ''')
 
     def create_session_go_home(self, user):
         session_token = secrets.token_urlsafe()
@@ -85,10 +114,11 @@ class H(BaseHTTPRequestHandler):
     def do_POST(self):
         content_len = int(self.headers.get('Content-Length'))
         body = parse_qs(self.rfile.read(content_len))
-        username = body[b'username'][0].decode('utf-8')
-        password = body[b'password'][0].decode('utf-8')
 
         if self.path == '/login':
+            username = body[b'username'][0].decode('utf-8')
+            password = body[b'password'][0].decode('utf-8')
+
             if username not in users:
                 self.send_response(404)
                 self.end_headers()
@@ -106,6 +136,9 @@ class H(BaseHTTPRequestHandler):
                 self.wfile.write(b'Password incorrect')
                 return
         elif self.path == '/signup':
+            username = body[b'username'][0].decode('utf-8')
+            password = body[b'password'][0].decode('utf-8')
+
             if username in users:
                 self.send_response(400)
                 self.end_headers()
@@ -119,8 +152,28 @@ class H(BaseHTTPRequestHandler):
                 users[username] = User(username, pass_hash)
                 self.create_session_go_home(users[username])
                 return
+        elif self.path == '/new_entry':
+            user = self.get_auth_user()
+            if user:
+                label = body[b'label'][0].decode('utf-8')
+                id = str(uuid.uuid4())
+                user.entries[id] = Entry(id, label)
+        elif self.path.startswith('/update_entry'):
+            user = self.get_auth_user()
+            id = self.path.split('/', 2)[2]
+            if b'done' in body:
+                done = body[b'done'][0].decode('utf-8') == 'on'
+                user.entries[id].done = done
+        elif self.path.startswith('/delete_entry'):
+            user = self.get_auth_user()
+            id = self.path.split('/', 2)[2]
+            del user.entries[id]
+        else:
+            self.send_response(404)
+            self.send_header('Location', '/')
+            self.end_headers()
 
-        self.send_response(404)
+        self.send_response(301)
         self.send_header('Location', '/')
         self.end_headers()
 
