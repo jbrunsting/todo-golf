@@ -46,9 +46,7 @@ class H(BaseHTTPRequestHandler):
         return None
 
     def get_entry_html(self, e):
-        return '''<p>''' + e.label + '''</p><form action="/update_entry/''' + e.id + '''" method="post">
-            <input type="checkbox" name="done" ''' + ('checked'
-                                                      if e.done else '') + '''>
+        return '''<p>''' + ('x ' if e.done else '') + e.label + '''</p><form action="/toggle_done/''' + e.id + '''" method="post">
             <input type="submit" value="Submit">
         </form><form action="/delete_entry/''' + e.id + '''" method="post">
             <input type="submit" value="Delete">
@@ -181,12 +179,10 @@ class H(BaseHTTPRequestHandler):
                 label = body[b'label'][0].decode('utf-8')
                 id = str(uuid.uuid4())
                 user.entries[id] = Entry(id, label)
-        elif self.path.startswith('/update_entry'):
+        elif self.path.startswith('/toggle_done'):
             user = self.get_auth_user()
             id = self.path.split('/', 2)[2]
-            if b'done' in body:
-                done = body[b'done'][0].decode('utf-8') == 'on'
-                user.entries[id].done = done
+            user.entries[id].done = not user.entries[id].done
         elif self.path.startswith('/delete_entry'):
             user = self.get_auth_user()
             id = self.path.split('/', 2)[2]
@@ -195,6 +191,7 @@ class H(BaseHTTPRequestHandler):
             self.send_response(404)
             self.send_header('Location', '/')
             self.end_headers()
+            return
 
         self.send_response(301)
         self.send_header('Location', '/')
