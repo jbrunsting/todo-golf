@@ -8,8 +8,7 @@ from passlib.hash import pbkdf2_sha256
 import secrets
 import time
 import uuid
-
-users = {}
+import os
 
 
 class Entry:
@@ -20,11 +19,43 @@ class Entry:
 
 
 class User:
-    def __init__(self, username, pass_hash, sessions=[]):
+    def __init__(self, username, pass_hash=None, sessions=[]):
         self.username = username
         self.pass_hash = pass_hash
-        self.sessions = []  # TODO: Use expiry
+        self.sessions = []
         self.entries = {}
+
+    def save(self):
+        f = open(self.username + '.user', 'w+')
+        f.write(self.pass_hash + '\n')
+        f.write(str(len(self.sessions)) + '\n')
+        for s in self.sessions:
+            f.write(s[0].replace('\n', '\a') + ',' + str(s[1]) + '\n')
+        f.write(str(len(self.entries.values())) + '\n')
+        for e in self.entries.values():
+            f.write(str(e.done) + ',' + e.id + ',' + e.label + '\n')
+
+    def load(self):
+        f = open(self.username + '.user', 'r')
+        self.pass_hash = f.readline()[:-1]
+        self.sessions = []
+        ns = int(f.readline())
+        for i in range(ns):
+            s = f.readline()[:-1].split(',', 1)
+            self.sessions.append((s[0].replace('\a', '\n'), s[1]))
+        self.entries = {}
+        ne = int(f.readline()[:-1])
+        for i in range(ne):
+            e = f.readline()[:-1].split(',', 2)
+            self.entries[e[1]] = Entry(e[1], e[2], e[0] == 'True')
+
+
+users = {}
+
+for f in os.listdir('.'):
+    if f.endswith('.user'):
+        users[f[:-5]] = User(f[:-5])
+        users[f[:-5]].load()
 
 
 class H(BaseHTTPRequestHandler):
@@ -40,16 +71,16 @@ class H(BaseHTTPRequestHandler):
                 user = users[username]
                 timestamp = time.time()
                 if session_token in [
-                        s[0] for s in user.sessions if s[1] > timestamp
+                        s[0] for s in user.sessions if float(s[1]) > timestamp
                 ]:
                     return user
         return None
 
     def get_entry_html(self, e):
-        return '''<p>''' + ('x ' if e.done else '') + e.label + '''</p><form action="/toggle_done/''' + e.id + '''" method="post">
-            <input type="submit" value="Submit">
+        return '''<p>''' + e.label + '''</p><form action="/toggle_done/''' + e.id + '''" method="post">
+            <input type="submit" value="''' + ('x' if e.done else '') + '''">
         </form><form action="/delete_entry/''' + e.id + '''" method="post">
-            <input type="submit" value="Delete">
+            <input type="submit" value='Delete'>
         </form>'''
 
     def do_GET(self):
@@ -62,23 +93,25 @@ class H(BaseHTTPRequestHandler):
                 <html>
                     <head><title>TD</title></head>
                     <body>
-                        <h1>Logged in as ''' + str(user.username) + '''</h1>
-                    </body>
-                    <ul>''' + ''.join([
+                        <ul>''' + ''.join([
                     '<li>' + self.get_entry_html(e) + '</li>'
                     for e in user.entries.values()
                 ]) + '''</ul>
-                    <h2>New entry</h2>
-                    <form action="/new_entry" method="post">
-                        <input type="text" name="label">
-                        <input type="submit" value="Submit">
-                    </form> 
-                    <h2>Reset password</h2>
-                    <form action="/reset_password" method="post">
-                        <input type="password" name="password">
-                        <input type="password" name="new_password">
-                        <input type="submit" value="Submit">
-                    </form> 
+                        <h2>New entry</h2>
+                        <form action="/new_entry" method="post">
+                            <input type="text" name="label">
+                            <input type="submit" value="Submit">
+                        </form> 
+                        <form action="/logout" method="post">
+                            <input type="submit" value="Logout">
+                        </form> 
+                        <h2>Reset password</h2>
+                        <form action="/reset_password" method="post">
+                            <input type="password" name="password">
+                            <input type="password" name="new_password">
+                            <input type="submit" value="Submit">
+                        </form> 
+                    </body>
                 </html>
             ''', 'utf-8'))
             return
@@ -109,6 +142,7 @@ class H(BaseHTTPRequestHandler):
     def create_session_go_home(self, user):
         session_token = secrets.token_urlsafe()
         user.sessions.append((session_token, time.time() + 60 * 60 * 24 * 30))
+        user.save()
 
         cookie = SimpleCookie()
         cookie['username'] = user.username
@@ -134,6 +168,7 @@ class H(BaseHTTPRequestHandler):
                 return
 
             user = users[username]
+            print("Verifying hash " + user.pass_hash)
             if pbkdf2_sha256.verify(password, user.pass_hash):
                 self.create_session_go_home(user)
                 return
@@ -142,6 +177,13 @@ class H(BaseHTTPRequestHandler):
                 self.end_headers()
                 self.wfile.write(b'Password incorrect')
                 return
+        elif self.path == '/logout':
+            cookie = SimpleCookie()
+            cookie['session_token'] = ''
+            self.send_response(301)
+            self.send_header('Set-Cookie', cookie.output(header='', sep=''))
+            self.send_header('Location', '/')
+            self.end_headers()
         elif self.path == '/signup':
             username = body[b'username'][0].decode('utf-8')
             password = body[b'password'][0].decode('utf-8')
@@ -168,6 +210,7 @@ class H(BaseHTTPRequestHandler):
                     user.pass_hash = pbkdf2_sha256.encrypt(
                         new_password, rounds=200000, salt_size=16)
                     user.sessions = []
+                    user.save()
                 else:
                     self.send_response(401)
                     self.end_headers()
@@ -179,14 +222,17 @@ class H(BaseHTTPRequestHandler):
                 label = body[b'label'][0].decode('utf-8')
                 id = str(uuid.uuid4())
                 user.entries[id] = Entry(id, label)
+                user.save()
         elif self.path.startswith('/toggle_done'):
             user = self.get_auth_user()
             id = self.path.split('/', 2)[2]
             user.entries[id].done = not user.entries[id].done
+            user.save()
         elif self.path.startswith('/delete_entry'):
             user = self.get_auth_user()
             id = self.path.split('/', 2)[2]
             del user.entries[id]
+            user.save()
         else:
             self.send_response(404)
             self.send_header('Location', '/')
