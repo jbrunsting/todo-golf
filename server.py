@@ -81,7 +81,7 @@ class H(BaseHTTPRequestHandler):
         <form style="display:inline-block" action="/toggle_done/''' + e.id + '''" method="post">
             <input style="background:none;border:none;cursor:pointer" type="submit" value="''' + ('&#9745' if e.done else '&#9744') + '''">
         </form>
-        <p style="display:inline-block">''' + e.label + '''</p> 
+        <p style="display:inline-block;width:calc(100% - 120px)">''' + e.label + '''</p> 
         <form style="display:inline-block;float:right;margin:16px" action="/delete_entry/''' + e.id + '''" method="post">
             <input style="background:none;border:none;cursor:pointer" type="submit" value='x'>
         </form>
@@ -151,8 +151,8 @@ class H(BaseHTTPRequestHandler):
                     for e in user.entries.values()
                 ]) + '''</ul>
                         <form action="/new_entry" method="post">
-                            <input type="text" name="label">
-                            <input type="submit" value="+">
+                            <input style="width:100%;margin-right:-45px;padding-right:45px" type="text" name="label">
+                            <input style="width:35px;padding:0;margin:0;cursor:pointer;background:none;border:none" type="submit" value="+">
                         </form> 
                     </body>
                 </html>
