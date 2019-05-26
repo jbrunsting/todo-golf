@@ -87,6 +87,29 @@ class H(BaseHTTPRequestHandler):
         </form>
         '''
 
+    def render_home(self, error=None):
+        self.wfile.write(bytes('''
+            <html>
+                <head><title>TD</title></head>
+                <body style="max-width:800px;margin:auto;padding:16px">
+                    <h2>TODO</h2>''' +
+                    ('<p>' + error + '</p>' if error else '')
+                    + '''<h3>Login</h3>
+                    <form action="/login" method="post">
+                        <input type="text" name="username">
+                        <input type="password" name="password">
+                        <input type="submit" value="Submit">
+                    </form> 
+                    <h3>Signup</h3>
+                    <form action="/signup" method="post">
+                        <input type="text" name="username">
+                        <input type="password" name="password">
+                        <input type="submit" value="Submit">
+                    </form> 
+                </body>
+            </html>
+        ''', 'utf-8'))
+
     def do_GET(self):
         user = self.get_auth_user()
         if user:
@@ -96,7 +119,7 @@ class H(BaseHTTPRequestHandler):
                 bytes('''
                 <html>
                     <head><title>TD</title></head>
-                    <body>
+                    <body style="max-width:800px;margin:auto;padding:16px">
                         <style>
                             input:checked ~ div {
                                 display: block;
@@ -116,10 +139,10 @@ class H(BaseHTTPRequestHandler):
                                 <h3>Reset password</h3>
                                 <form action="/reset_password" method="post">
                                     <label for="password">Password</label>
-                                    <input type="password" name="password">
+                                    <input style="display:block" type="password" name="password">
                                     <label for="new_password">New password</label>
-                                    <input type="password" name="new_password">
-                                    <input type="submit" value="Submit">
+                                    <input style="display:block" type="password" name="new_password">
+                                    <input type="submit" value="Reset">
                                 </form> 
                             </div>
                         </label>
@@ -138,26 +161,7 @@ class H(BaseHTTPRequestHandler):
 
         self.send_response(200)
         self.end_headers()
-        self.wfile.write(b'''
-            <html>
-                <head><title>TD</title></head>
-                <body>
-                    <h1>TD</h1>
-                    <h2>Login</h2>
-                    <form action="/login" method="post">
-                        <input type="text" name="username">
-                        <input type="password" name="password">
-                        <input type="submit" value="Submit">
-                    </form> 
-                    <h2>Signup</h2>
-                    <form action="/signup" method="post">
-                        <input type="text" name="username">
-                        <input type="password" name="password">
-                        <input type="submit" value="Submit">
-                    </form> 
-                </body>
-            </html>
-        ''')
+        self.render_home()
 
     def create_session_go_home(self, user):
         session_token = secrets.token_urlsafe()
@@ -183,8 +187,7 @@ class H(BaseHTTPRequestHandler):
             if username not in users:
                 self.send_response(404)
                 self.end_headers()
-                self.wfile.write(
-                    bytes('User \'' + username + '\' not found', 'utf-8'))
+                self.render_home('Username or password incorrect')
                 return
 
             user = users[username]
@@ -195,7 +198,7 @@ class H(BaseHTTPRequestHandler):
             else:
                 self.send_response(401)
                 self.end_headers()
-                self.wfile.write(b'Password incorrect')
+                self.render_home('Username or password incorrect')
                 return
         elif self.path == '/logout':
             cookie = SimpleCookie()
@@ -211,9 +214,7 @@ class H(BaseHTTPRequestHandler):
             if username in users:
                 self.send_response(400)
                 self.end_headers()
-                self.wfile.write(
-                    bytes('Username \'' + username + '\' already taken ',
-                          'utf-8'))
+                self.render_home('Username \'' + username + '\' already taken')
                 return
             else:
                 pass_hash = pbkdf2_sha256.encrypt(
