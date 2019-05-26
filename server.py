@@ -77,11 +77,15 @@ class H(BaseHTTPRequestHandler):
         return None
 
     def get_entry_html(self, e):
-        return '''<p>''' + e.label + '''</p><form action="/toggle_done/''' + e.id + '''" method="post">
-            <input type="submit" value="''' + ('x' if e.done else '') + '''">
-        </form><form action="/delete_entry/''' + e.id + '''" method="post">
-            <input type="submit" value='Delete'>
-        </form>'''
+        return '''
+        <form style="display:inline-block" action="/toggle_done/''' + e.id + '''" method="post">
+            <input style="background:none;border:none;cursor:pointer" type="submit" value="''' + ('&#9745' if e.done else '&#9744') + '''">
+        </form>
+        <p style="display:inline-block">''' + e.label + '''</p> 
+        <form style="display:inline-block;float:right;margin:16px" action="/delete_entry/''' + e.id + '''" method="post">
+            <input style="background:none;border:none;cursor:pointer" type="submit" value='x'>
+        </form>
+        '''
 
     def do_GET(self):
         user = self.get_auth_user()
@@ -93,23 +97,39 @@ class H(BaseHTTPRequestHandler):
                 <html>
                     <head><title>TD</title></head>
                     <body>
-                        <ul>''' + ''.join([
-                    '<li>' + self.get_entry_html(e) + '</li>'
+                        <style>
+                            input:checked ~ div {
+                                display: block;
+                            }
+                            div {
+                                display: none;
+                            }
+                        </style>
+                        <label>
+                            <input style="display:none" type="checkbox"/>
+                            <h2 style="display:inline-block;margin:0">TODO</h2>
+                            <p style="cursor:pointer;float:right;margin:0">&#9881</p>
+                            <div>
+                                <form action="/logout" method="post">
+                                    <input style="float:right" type="submit" value="Logout">
+                                </form> 
+                                <h3>Reset password</h3>
+                                <form action="/reset_password" method="post">
+                                    <label for="password">Password</label>
+                                    <input type="password" name="password">
+                                    <label for="new_password">New password</label>
+                                    <input type="password" name="new_password">
+                                    <input type="submit" value="Submit">
+                                </form> 
+                            </div>
+                        </label>
+                        <ul style="padding:0">''' + ''.join([
+                            '<li style="display:block;border-top:1px solid black;">' + self.get_entry_html(e) + '</li>'
                     for e in user.entries.values()
                 ]) + '''</ul>
-                        <h2>New entry</h2>
                         <form action="/new_entry" method="post">
                             <input type="text" name="label">
-                            <input type="submit" value="Submit">
-                        </form> 
-                        <form action="/logout" method="post">
-                            <input type="submit" value="Logout">
-                        </form> 
-                        <h2>Reset password</h2>
-                        <form action="/reset_password" method="post">
-                            <input type="password" name="password">
-                            <input type="password" name="new_password">
-                            <input type="submit" value="Submit">
+                            <input type="submit" value="+">
                         </form> 
                     </body>
                 </html>
