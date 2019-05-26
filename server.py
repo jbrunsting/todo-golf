@@ -81,7 +81,7 @@ class H(BaseHTTPRequestHandler):
         <form style="display:inline-block" action="/toggle_done/''' + e.id + '''" method="post">
             <input style="background:none;border:none;cursor:pointer" type="submit" value="''' + ('&#9745' if e.done else '&#9744') + '''">
         </form>
-        <p style="display:inline-block;width:calc(100% - 120px)">''' + e.label + '''</p> 
+        <p style="display:inline-block;width:calc(100% - 100px);overflow-wrap:break-word;text-decoration:''' + ('line-through' if e.done else '') + '''">''' + e.label + '''</p> 
         <form style="display:inline-block;float:right;margin:16px" action="/delete_entry/''' + e.id + '''" method="post">
             <input style="background:none;border:none;cursor:pointer" type="submit" value='x'>
         </form>
@@ -94,17 +94,19 @@ class H(BaseHTTPRequestHandler):
                 <body style="max-width:800px;margin:auto;padding:16px">
                     <h2>TODO</h2>''' +
                     ('<p>' + error + '</p>' if error else '')
-                    + '''<h3>Login</h3>
-                    <form action="/login" method="post">
-                        <input type="text" name="username">
-                        <input type="password" name="password">
-                        <input type="submit" value="Submit">
+                    + '''<form style="float:left" action="/signup" method="post">
+                        <label for="username">Username</label>
+                        <input style="display:block" type="text" name="username">
+                        <label for="password">Password</label>
+                        <input style="display:block" type="password" name="password">
+                        <input type="submit" value="Signup">
                     </form> 
-                    <h3>Signup</h3>
-                    <form action="/signup" method="post">
-                        <input type="text" name="username">
-                        <input type="password" name="password">
-                        <input type="submit" value="Submit">
+                    <form style="float:right" action="/login" method="post">
+                        <label for="username">Username</label>
+                        <input style="display:block" type="text" name="username">
+                        <label for="password">Password</label>
+                        <input style="display:block" type="password" name="password">
+                        <input type="submit" value="Login">
                     </form> 
                 </body>
             </html>
@@ -131,18 +133,17 @@ class H(BaseHTTPRequestHandler):
                         <label>
                             <input style="display:none" type="checkbox"/>
                             <h2 style="display:inline-block;margin:0">TODO</h2>
-                            <p style="cursor:pointer;float:right;margin:0">&#9881</p>
+                            <p style="cursor:pointer;float:right;margin:8px">&#9881</p>
                             <div>
                                 <form action="/logout" method="post">
                                     <input style="float:right" type="submit" value="Logout">
                                 </form> 
-                                <h3>Reset password</h3>
                                 <form action="/reset_password" method="post">
                                     <label for="password">Password</label>
                                     <input style="display:block" type="password" name="password">
                                     <label for="new_password">New password</label>
                                     <input style="display:block" type="password" name="new_password">
-                                    <input type="submit" value="Reset">
+                                    <input type="submit" value="Reset password">
                                 </form> 
                             </div>
                         </label>
