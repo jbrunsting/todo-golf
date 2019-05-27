@@ -11,13 +11,6 @@ import uuid
 import os
 
 
-class Entry:
-    def __init__(self, id, label, done=False):
-        self.id = id
-        self.label = label
-        self.done = done
-
-
 class User:
     def __init__(self, username, pass_hash=None, sessions=[]):
         self.username = username
@@ -30,12 +23,7 @@ class User:
         f.write(self.pass_hash + '\n')
         timestamp = time.time()
         self.sessions = [s for s in self.sessions if s[1] > timestamp]
-        f.write(str(len(self.sessions)) + '\n')
-        for s in self.sessions:
-            f.write(s[0].replace('\n', '\a') + ',' + str(s[1]) + '\n')
-        f.write(str(len(self.entries.values())) + '\n')
-        for e in self.entries.values():
-            f.write(str(e.done) + ',' + e.id + ',' + e.label + '\n')
+        f.write(str(len(self.sessions)) + '\n' + ''.join(s[0].replace('\n', '\a') + ',' + str(s[1]) + '\n' for s in self.sessions) + str(len(self.entries.values())) + '\n' + ''.join(str(e[2]) + ',' + e[0] + ',' + e[1] + '\n' for e in self.entries.values()))
 
     def load(self):
         f = open(self.username + '.user', 'r')
@@ -49,7 +37,7 @@ class User:
         ne = int(f.readline()[:-1])
         for i in range(ne):
             e = f.readline()[:-1].split(',', 2)
-            self.entries[e[1]] = Entry(e[1], e[2], e[0] == 'True')
+            self.entries[e[1]] = [e[1], e[2], e[0] == 'True']
 
 
 users = {}
@@ -80,14 +68,14 @@ class H(BaseHTTPRequestHandler):
 
     def get_entry_html(self, e):
         return '''
-        <form style="display:inline-block" action="/e_t/''' + e.id + '''" method="post">
+        <form style="display:inline-block" action="/e_t/''' + e[0] + '''" method="post">
             <input style="background:none;border:none;cursor:pointer" type="submit" value="''' + (
-            '&#9745' if e.done else '&#9744') + '''">
+            '&#9745' if e[2] else '&#9744') + '''">
         </form>
         <p style="display:inline-block;width:calc(100% - 100px);overflow-wrap:break-word;text-decoration:''' + (
                 'line-through'
-                if e.done else '') + '''">''' + e.label + '''</p> 
-        <form style="display:inline-block;float:right;margin:16px" action="/e_d/''' + e.id + '''" method="post">
+                if e[2] else '') + '''">''' + e[1] + '''</p> 
+        <form style="display:inline-block;float:right;margin:16px" action="/e_d/''' + e[0] + '''" method="post">
             <input style="background:none;border:none;cursor:pointer" type="submit" value='x'>
         </form>
         '''
@@ -180,32 +168,25 @@ class H(BaseHTTPRequestHandler):
         user = self.get_auth_user()
         username = body.get(b'username', [b''])[0].decode('utf-8')
         password = body.get(b'password', [b''])[0].decode('utf-8')
-        cookie = None
+        cookie = err = None
 
         if self.path == '/login':
-            if username not in users:
-                self.send_response(404)
-                self.end_headers()
-                self.render_home('Username or password incorrect')
-                return
-            user = users[username]
-            if pbkdf2_sha256.verify(password, user.pass_hash):
-                cookie = self.create_session_cookie(user)
+            if username in users:
+                user = users[username]
+                if pbkdf2_sha256.verify(password, user.pass_hash):
+                    cookie = self.create_session_cookie(user)
+                else:
+                    err = (401, 'Username or password incorrect')
             else:
-                self.send_response(401)
-                self.end_headers()
-                self.render_home('Username or password incorrect')
-                return
+                err = (404, 'Username or password incorrect')
         elif self.path == '/signup':
             if username in users:
-                self.send_response(400)
-                self.end_headers()
-                self.render_home('Username \'' + username + '\' already taken')
-                return
+                err = (400, 'Username \'' + username + '\' already taken')
             else:
                 pass_hash = pbkdf2_sha256.encrypt(
                     password, rounds=200000, salt_size=16)
-                users[username] = User(username, pass_hash)
+                user = User(username, pass_hash)
+                users[username] = user
                 cookie = self.create_session_cookie(users[username])
         elif self.path == '/logout':
             cookie = SimpleCookie()
@@ -228,25 +209,27 @@ class H(BaseHTTPRequestHandler):
             if user:
                 label = body[b'label'][0].decode('utf-8')
                 id = str(uuid.uuid4())
-                user.entries[id] = Entry(id, label)
+                user.entries[id] = [id, label, False]
         elif self.path.startswith('/e_t') or self.path.startswith('/e_d'):
             id = self.path.split('/', 2)[2]
             if self.path.startswith('/e_t'):
-                user.entries[id].done = not user.entries[id].done
+                user.entries[id][2] = not user.entries[id][2]
             else:
                 del user.entries[id]
         else:
-            self.send_response(404)
+            err = (404, '')
+
+        if err:
+            self.send_response(err[0])
+            self.end_headers()
+            self.render_home(err[1])
+        else:
+            user.save()
+            self.send_response(301)
+            if cookie:
+                self.send_header('Set-Cookie', cookie.output(header='', sep=''))
             self.send_header('Location', '/')
             self.end_headers()
-            return
-
-        user.save()
-        self.send_response(301)
-        if cookie:
-            self.send_header('Set-Cookie', cookie.output(header='', sep=''))
-        self.send_header('Location', '/')
-        self.end_headers()
 
 
 HTTPServer(('localhost', 8080), H).serve_forever()
