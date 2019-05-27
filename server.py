@@ -10,22 +10,23 @@ import time
 import uuid
 import os
 
+d = 'utf-8'
 us = {}
 
 for f in os.listdir('.'):
-    if f.endswith('.u'):
-        u = [f[:-2], None, [], {}]
-        us[f[:-2]] = u
-        f = open(u[0] + '.u', 'r')
-        u[1] = f.readline()[:-1]
-        u[2] = []
-        for i in range(int(f.readline())):
-            s = f.readline()[:-1].split(',', 1)
-            u[2].append((s[0].replace('\a', '\n'), float(s[1])))
-        u[3] = {}
-        for i in range(int(f.readline())):
-            e = f.readline()[:-1].split(',', 2)
-            u[3][e[1]] = [e[1], e[2], e[0] == 'True']
+    if not f.endswith('.u'): continue
+    u = [f[:-2], None, [], {}]
+    us[f[:-2]] = u
+    f = open(u[0] + '.u', 'r')
+    u[1] = f.readline()[:-1]
+    u[2] = []
+    for i in range(int(f.readline())):
+        s = f.readline()[:-1].split(',', 1)
+        u[2].append((s[0].replace('\a', '\n'), float(s[1])))
+    u[3] = {}
+    for i in range(int(f.readline())):
+        e = f.readline()[:-1].split(',', 2)
+        u[3][e[1]] = [e[1], e[2], e[0] == 'True']
 
 
 class H(BaseHTTPRequestHandler):
@@ -34,12 +35,12 @@ class H(BaseHTTPRequestHandler):
 
     def get_u(self):
         cookies = SimpleCookie(self.headers.get('Cookie'))
-        if 'uname' in cookies and 'session_token' in cookies:
-            uname = cookies['uname'].value
-            if uname in us:
-                u = us[uname]
+        if 'a' in cookies and 'b' in cookies:
+            a = cookies['a'].value
+            if a in us:
+                u = us[a]
                 timestamp = time.time()
-                if cookies['session_token'].value in [
+                if cookies['b'].value in [
                         s[0] for s in u[2] if s[1] > timestamp
                 ]:
                     return u
@@ -49,21 +50,20 @@ class H(BaseHTTPRequestHandler):
         return self.wfile.write(
             bytes(
                 '<title>TD</title><body style="max-width:800px;margin:auto;padding:16px">'
-                + b + '</body>', 'utf-8'))
+                + b + '</body>', d))
 
     def render_home(self, error=None):
         form = '''
-        <form style="float:left" action="/signup" method="post">
-            <label for="uname">Username</label>
-            <input style="display:block" type="text" name="uname">
-            <label for="password">Password</label>
-            <input style="display:block" type="password" name="password">
+        <form style="float:left" action="/Signup" method="post">
+            <label for="a">Username</label>
+            <input style="display:block" type="text" name="a">
+            <label for="b">Password</label>
+            <input style="display:block" type="password" name="b">
             <input type="submit" value="Signup">
         </form>'''
         self.write_html('<h2>TODO</h2>' + (
-            '<p>' + error + '</p>'
-            if error else '') + form + form.replace('left', 'right').replace(
-                'signup', 'login').replace('Signup', 'Login'))
+            '<p>' + error + '</p>' if error else ''
+        ) + form + form.replace('left', 'right').replace('Signup', 'Login'))
 
     def do_GET(self):
         u = self.get_u()
@@ -87,14 +87,14 @@ class H(BaseHTTPRequestHandler):
             <h2 style="display:inline-block;margin:0">TODO</h2>
             <p style="cursor:pointer;float:right;margin:8px">&#9881</p>
             <div>
-                <form action="/logout" method="post">
+                <form action="/l" method="post">
                     <input style="float:right" type="submit" value="Logout">
                 </form> 
-                <form action="/reset_password" method="post">
-                    <label for="password">Password</label>
-                    <input style="display:block" type="password" name="password">
-                    <label for="new_password">New password</label>
-                    <input style="display:block" type="password" name="new_password">
+                <form action="/r" method="post">
+                    <label for="b">Password</label>
+                    <input style="display:block" type="password" name="b">
+                    <label for="c">New password</label>
+                    <input style="display:block" type="password" name="c">
                     <input type="submit" value="Reset password">
                 </form> 
             </div>
@@ -114,72 +114,68 @@ class H(BaseHTTPRequestHandler):
                 </form>
                 ''' + '</li>' for e in u[3].values()
         ]) + '''</ul>
-        <form action="/new_entry" method="post">
+        <form action="/n" method="post">
             <input style="width:100%;margin-right:-45px;padding-right:45px" type="text" name="label">
             <input style="width:35px;padding:0;margin:0;cursor:pointer;background:none;border:none" type="submit" value="+">
         </form>''')
 
     def create_session_cookie(self, u):
-        session_token = secrets.token_urlsafe()
-        u[2].append((session_token, time.time() + 7**8))
+        b = secrets.token_urlsafe()
+        u[2].append((b, time.time() + 7**8))
         cookie = SimpleCookie()
-        cookie['uname'] = u[0]
-        cookie['session_token'] = session_token
+        cookie['a'] = u[0]
+        cookie['b'] = b
         return cookie
 
     def do_POST(self):
         content_len = int(self.headers.get('Content-Length'))
         body = parse_qs(self.rfile.read(content_len))
         u = self.get_u()
-        uname = body.get(b'uname', [b''])[0].decode('utf-8')
-        password = body.get(b'password', [b''])[0].decode('utf-8')
+        a, b = [body.get(c, [b''])[0].decode(d) for c in [b'a', b'b']]
         cookie = err = None
 
-        if self.path == '/login':
-            if uname in us:
-                u = us[uname]
-                if pbkdf2_sha256.verify(password, u[1]):
+        if self.path == '/Login':
+            if a in us:
+                u = us[a]
+                if pbkdf2_sha256.verify(b, u[1]):
                     cookie = self.create_session_cookie(u)
                 else:
                     err = (401, 'Username or password incorrect')
             else:
                 err = (404, 'Username or password incorrect')
-        elif self.path == '/signup':
-            if uname in us:
-                err = (400, 'Username \'' + uname + '\' already taken')
+        elif self.path == '/Signup':
+            if a in us:
+                err = (400, 'Username \'' + a + '\' already taken')
             else:
                 pass_hash = pbkdf2_sha256.encrypt(
-                    password, rounds=200000, salt_size=16)
-                u = [uname, pass_hash, [], {}]
-                us[uname] = u
-                cookie = self.create_session_cookie(us[uname])
-        elif self.path == '/logout':
+                    b, rounds=200000, salt_size=16)
+                u = [a, pass_hash, [], {}]
+                us[a] = u
+                cookie = self.create_session_cookie(us[a])
+        elif self.path == '/l':
             cookie = SimpleCookie()
-            cookie['session_token'] = ''
-        elif self.path == '/reset_password':
+            cookie['a'] = ''
+            cookie['b'] = ''
+        elif self.path == '/r':
             if u:
-                if pbkdf2_sha256.verify(body[b'password'][0].decode('utf-8'),
-                                        u[1]):
+                if pbkdf2_sha256.verify(body[b'b'][0].decode(), u[1]):
                     u.pass_hash = pbkdf2_sha256.encrypt(
-                        body[b'new_password'][0].decode('utf-8'),
-                        rounds=200000,
-                        salt_size=16)
+                        body[b'c'][0].decode(d), rounds=200000, salt_size=16)
                     u[2] = []
                 else:
                     self.send_response(401)
                     self.end_headers()
                     self.wfile.write(b'<p>Password incorrect</p>')
                     return
-        elif self.path == '/new_entry':
+        elif self.path == '/n':
             if u:
-                label = body[b'label'][0].decode('utf-8')
+                label = body[b'label'][0].decode(d)
                 id = str(uuid.uuid4())
                 u[3][id] = [id, label, False]
         elif self.path.startswith('/e_t') or self.path.startswith('/e_d'):
             id = self.path.split('/', 2)[2]
-            if self.path.startswith('/e_t'):
-                u[3][id][2] = not u[3][id][2]
-            else:
+            u[3][id][2] = not u[3][id][2]
+            if self.path.startswith('/e_d'):
                 del u[3][id]
         else:
             err = (404, '')
