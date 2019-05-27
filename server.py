@@ -10,35 +10,22 @@ import time
 import uuid
 import os
 
-
-def save(u):
-    f = open(u[0] + '.u', 'w+')
-    f.write(u[1] + '\n')
-    timestamp = time.time()
-    u[2] = [s for s in u[2] if s[1] > timestamp]
-    f.write(str(len(u[2])) + '\n' + ''.join(s[0].replace('\n', '\a') + ',' + str(s[1]) + '\n' for s in u[2]) + str(len(u[3].values())) + '\n' + ''.join(str(e[2]) + ',' + e[0] + ',' + e[1] + '\n' for e in u[3].values()))
-
-def load(u):
-    f = open(u[0] + '.u', 'r')
-    u[1] = f.readline()[:-1]
-    u[2] = []
-    ns = int(f.readline())
-    for i in range(ns):
-        s = f.readline()[:-1].split(',', 1)
-        u[2].append((s[0].replace('\a', '\n'), float(s[1])))
-    u[3] = {}
-    ne = int(f.readline()[:-1])
-    for i in range(ne):
-        e = f.readline()[:-1].split(',', 2)
-        u[3][e[1]] = [e[1], e[2], e[0] == 'True']
-
-
 us = {}
 
 for f in os.listdir('.'):
     if f.endswith('.u'):
-        us[f[:-2]] = [f[:-2], None, [], {}]
-        load(us[f[:-2]])
+        u = [f[:-2], None, [], {}]
+        us[f[:-2]] = u
+        f = open(u[0] + '.u', 'r')
+        u[1] = f.readline()[:-1]
+        u[2] = []
+        for i in range(int(f.readline())):
+            s = f.readline()[:-1].split(',', 1)
+            u[2].append((s[0].replace('\a', '\n'), float(s[1])))
+        u[3] = {}
+        for i in range(int(f.readline())):
+            e = f.readline()[:-1].split(',', 2)
+            u[3][e[1]] = [e[1], e[2], e[0] == 'True']
 
 
 class H(BaseHTTPRequestHandler):
@@ -58,52 +45,36 @@ class H(BaseHTTPRequestHandler):
                     return u
         return None
 
-    def get_entry_html(self, e):
-        return '''
-        <form style="display:inline-block" action="/e_t/''' + e[0] + '''" method="post">
-            <input style="background:none;border:none;cursor:pointer" type="submit" value="''' + (
-            '&#9745' if e[2] else '&#9744') + '''">
-        </form>
-        <p style="display:inline-block;width:calc(100% - 100px);overflow-wrap:break-word;text-decoration:''' + (
-                'line-through'
-                if e[2] else '') + '''">''' + e[1] + '''</p> 
-        <form style="display:inline-block;float:right;margin:16px" action="/e_d/''' + e[0] + '''" method="post">
-            <input style="background:none;border:none;cursor:pointer" type="submit" value='x'>
-        </form>
-        '''
+    def write_html(self, b):
+        return self.wfile.write(
+            bytes(
+                '<title>TD</title><body style="max-width:800px;margin:auto;padding:16px">'
+                + b + '</body>', 'utf-8'))
 
     def render_home(self, error=None):
-        self.wfile.write(
-            bytes('''
-            <title>TD</title>
-            <body style="max-width:800px;margin:auto;padding:16px">
-                <h2>TODO</h2>''' + ('<p>' + error + '</p>' if error else '') +
-                  '''<form style="float:left" action="/signup" method="post">
-                    <label for="uname">Username</label>
-                    <input style="display:block" type="text" name="uname">
-                    <label for="password">Password</label>
-                    <input style="display:block" type="password" name="password">
-                    <input type="submit" value="Signup">
-                </form> 
-                <form style="float:right" action="/login" method="post">
-                    <label for="uname">Username</label>
-                    <input style="display:block" type="text" name="uname">
-                    <label for="password">Password</label>
-                    <input style="display:block" type="password" name="password">
-                    <input type="submit" value="Login">
-                </form> 
-            </body>
-        ''', 'utf-8'))
+        self.write_html('<h2>TODO</h2>' +
+                        ('<p>' + error + '</p>' if error else '') + '''
+            <form style="float:left" action="/signup" method="post">
+                <label for="uname">Username</label>
+                <input style="display:block" type="text" name="uname">
+                <label for="password">Password</label>
+                <input style="display:block" type="password" name="password">
+                <input type="submit" value="Signup">
+            </form> 
+            <form style="float:right" action="/login" method="post">
+                <label for="uname">Username</label>
+                <input style="display:block" type="text" name="uname">
+                <label for="password">Password</label>
+                <input style="display:block" type="password" name="password">
+                <input type="submit" value="Login">
+            </form>''')
 
     def do_GET(self):
         u = self.get_u()
         if u:
             self.send_response(200)
             self.end_headers()
-            self.wfile.write(
-                bytes('''
-                <title>TD</title>
-                <body style="max-width:800px;margin:auto;padding:16px">
+            self.write_html('''
                     <style>
                         input:checked ~ div {
                             display: block;
@@ -130,16 +101,24 @@ class H(BaseHTTPRequestHandler):
                         </div>
                     </label>
                     <ul style="padding:0">''' + ''.join([
-                    '<li style="display:block;border-top:1px solid black;">' +
-                    self.get_entry_html(e) + '</li>'
-                    for e in u[3].values()
-                ]) + '''</ul>
+                '<li style="display:block;border-top:1px solid black;">' + '''
+                    <form style="display:inline-block" action="/e_t/''' +
+                e[0] + '''" method="post">
+                        <input style="background:none;border:none;cursor:pointer" type="submit" value="&#974'''
+                + str(4 + int(e[2])) + '''">
+                    </form>
+                    <p style="display:inline-block;width:calc(100% - 100px);overflow-wrap:break-word;text-decoration:'''
+                + ('line-through' if e[2] else '') + '''">''' + e[1] + '''</p> 
+                    <form style="display:inline-block;float:right;margin:16px" action="/e_d/'''
+                + e[0] + '''" method="post">
+                        <input style="background:none;border:none;cursor:pointer" type="submit" value='x'>
+                    </form>
+                    ''' + '</li>' for e in u[3].values()
+            ]) + '''</ul>
                     <form action="/new_entry" method="post">
                         <input style="width:100%;margin-right:-45px;padding-right:45px" type="text" name="label">
                         <input style="width:35px;padding:0;margin:0;cursor:pointer;background:none;border:none" type="submit" value="+">
-                    </form> 
-                </body>
-            ''', 'utf-8'))
+                    </form>''')
             return
 
         self.send_response(200)
@@ -216,10 +195,20 @@ class H(BaseHTTPRequestHandler):
             self.end_headers()
             self.render_home(err[1])
         else:
-            save(u)
+            f = open(u[0] + '.u', 'w+')
+            f.write(u[1] + '\n')
+            timestamp = time.time()
+            u[2] = [s for s in u[2] if s[1] > timestamp]
+            f.write(
+                str(len(u[2])) + '\n' + ''.join(
+                    s[0].replace('\n', '\a') + ',' + str(s[1]) + '\n'
+                    for s in u[2]) + str(len(u[3].values())) + '\n' + ''.join(
+                        str(e[2]) + ',' + e[0] + ',' + e[1] + '\n'
+                        for e in u[3].values()))
             self.send_response(301)
             if cookie:
-                self.send_header('Set-Cookie', cookie.output(header='', sep=''))
+                self.send_header('Set-Cookie', cookie.output(
+                    header='', sep=''))
             self.send_header('Location', '/')
             self.end_headers()
 
