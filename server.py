@@ -11,41 +11,34 @@ import uuid
 import os
 
 
-class User:
-    def __init__(self, username, pass_hash=None, sessions=[]):
-        self.username = username
-        self.pass_hash = pass_hash
-        self.sessions = []
-        self.entries = {}
+def save(u):
+    f = open(u[0] + '.user', 'w+')
+    f.write(u[1] + '\n')
+    timestamp = time.time()
+    u[2] = [s for s in u[2] if s[1] > timestamp]
+    f.write(str(len(u[2])) + '\n' + ''.join(s[0].replace('\n', '\a') + ',' + str(s[1]) + '\n' for s in u[2]) + str(len(u[3].values())) + '\n' + ''.join(str(e[2]) + ',' + e[0] + ',' + e[1] + '\n' for e in u[3].values()))
 
-    def save(self):
-        f = open(self.username + '.user', 'w+')
-        f.write(self.pass_hash + '\n')
-        timestamp = time.time()
-        self.sessions = [s for s in self.sessions if s[1] > timestamp]
-        f.write(str(len(self.sessions)) + '\n' + ''.join(s[0].replace('\n', '\a') + ',' + str(s[1]) + '\n' for s in self.sessions) + str(len(self.entries.values())) + '\n' + ''.join(str(e[2]) + ',' + e[0] + ',' + e[1] + '\n' for e in self.entries.values()))
-
-    def load(self):
-        f = open(self.username + '.user', 'r')
-        self.pass_hash = f.readline()[:-1]
-        self.sessions = []
-        ns = int(f.readline())
-        for i in range(ns):
-            s = f.readline()[:-1].split(',', 1)
-            self.sessions.append((s[0].replace('\a', '\n'), float(s[1])))
-        self.entries = {}
-        ne = int(f.readline()[:-1])
-        for i in range(ne):
-            e = f.readline()[:-1].split(',', 2)
-            self.entries[e[1]] = [e[1], e[2], e[0] == 'True']
+def load(u):
+    f = open(u[0] + '.user', 'r')
+    u[1] = f.readline()[:-1]
+    u[2] = []
+    ns = int(f.readline())
+    for i in range(ns):
+        s = f.readline()[:-1].split(',', 1)
+        u[2].append((s[0].replace('\a', '\n'), float(s[1])))
+    u[3] = {}
+    ne = int(f.readline()[:-1])
+    for i in range(ne):
+        e = f.readline()[:-1].split(',', 2)
+        u[3][e[1]] = [e[1], e[2], e[0] == 'True']
 
 
 users = {}
 
 for f in os.listdir('.'):
     if f.endswith('.user'):
-        users[f[:-5]] = User(f[:-5])
-        users[f[:-5]].load()
+        users[f[:-5]] = [f[:-5], None, [], {}]
+        load(users[f[:-5]])
 
 
 class H(BaseHTTPRequestHandler):
@@ -61,7 +54,7 @@ class H(BaseHTTPRequestHandler):
                 user = users[username]
                 timestamp = time.time()
                 if session_token in [
-                        s[0] for s in user.sessions if s[1] > timestamp
+                        s[0] for s in user[2] if s[1] > timestamp
                 ]:
                     return user
         return None
@@ -140,7 +133,7 @@ class H(BaseHTTPRequestHandler):
                     <ul style="padding:0">''' + ''.join([
                     '<li style="display:block;border-top:1px solid black;">' +
                     self.get_entry_html(e) + '</li>'
-                    for e in user.entries.values()
+                    for e in user[3].values()
                 ]) + '''</ul>
                     <form action="/new_entry" method="post">
                         <input style="width:100%;margin-right:-45px;padding-right:45px" type="text" name="label">
@@ -156,9 +149,9 @@ class H(BaseHTTPRequestHandler):
 
     def create_session_cookie(self, user):
         session_token = secrets.token_urlsafe()
-        user.sessions.append((session_token, time.time() + 60 * 60 * 24 * 30))
+        user[2].append((session_token, time.time() + 7**8))
         cookie = SimpleCookie()
-        cookie['username'] = user.username
+        cookie['username'] = user[0]
         cookie['session_token'] = session_token
         return cookie
 
@@ -173,7 +166,7 @@ class H(BaseHTTPRequestHandler):
         if self.path == '/login':
             if username in users:
                 user = users[username]
-                if pbkdf2_sha256.verify(password, user.pass_hash):
+                if pbkdf2_sha256.verify(password, user[1]):
                     cookie = self.create_session_cookie(user)
                 else:
                     err = (401, 'Username or password incorrect')
@@ -185,7 +178,7 @@ class H(BaseHTTPRequestHandler):
             else:
                 pass_hash = pbkdf2_sha256.encrypt(
                     password, rounds=200000, salt_size=16)
-                user = User(username, pass_hash)
+                user = [username, pass_hash, [], {}]
                 users[username] = user
                 cookie = self.create_session_cookie(users[username])
         elif self.path == '/logout':
@@ -194,12 +187,12 @@ class H(BaseHTTPRequestHandler):
         elif self.path == '/reset_password':
             if user:
                 if pbkdf2_sha256.verify(body[b'password'][0].decode('utf-8'),
-                                        user.pass_hash):
+                                        user[1]):
                     user.pass_hash = pbkdf2_sha256.encrypt(
                         body[b'new_password'][0].decode('utf-8'),
                         rounds=200000,
                         salt_size=16)
-                    user.sessions = []
+                    user[2] = []
                 else:
                     self.send_response(401)
                     self.end_headers()
@@ -209,13 +202,13 @@ class H(BaseHTTPRequestHandler):
             if user:
                 label = body[b'label'][0].decode('utf-8')
                 id = str(uuid.uuid4())
-                user.entries[id] = [id, label, False]
+                user[3][id] = [id, label, False]
         elif self.path.startswith('/e_t') or self.path.startswith('/e_d'):
             id = self.path.split('/', 2)[2]
             if self.path.startswith('/e_t'):
-                user.entries[id][2] = not user.entries[id][2]
+                user[3][id][2] = not user[3][id][2]
             else:
-                del user.entries[id]
+                del user[3][id]
         else:
             err = (404, '')
 
@@ -224,7 +217,7 @@ class H(BaseHTTPRequestHandler):
             self.end_headers()
             self.render_home(err[1])
         else:
-            user.save()
+            save(user)
             self.send_response(301)
             if cookie:
                 self.send_header('Set-Cookie', cookie.output(header='', sep=''))
