@@ -12,14 +12,14 @@ import os
 
 
 def save(u):
-    f = open(u[0] + '.user', 'w+')
+    f = open(u[0] + '.u', 'w+')
     f.write(u[1] + '\n')
     timestamp = time.time()
     u[2] = [s for s in u[2] if s[1] > timestamp]
     f.write(str(len(u[2])) + '\n' + ''.join(s[0].replace('\n', '\a') + ',' + str(s[1]) + '\n' for s in u[2]) + str(len(u[3].values())) + '\n' + ''.join(str(e[2]) + ',' + e[0] + ',' + e[1] + '\n' for e in u[3].values()))
 
 def load(u):
-    f = open(u[0] + '.user', 'r')
+    f = open(u[0] + '.u', 'r')
     u[1] = f.readline()[:-1]
     u[2] = []
     ns = int(f.readline())
@@ -33,30 +33,30 @@ def load(u):
         u[3][e[1]] = [e[1], e[2], e[0] == 'True']
 
 
-users = {}
+us = {}
 
 for f in os.listdir('.'):
-    if f.endswith('.user'):
-        users[f[:-5]] = [f[:-5], None, [], {}]
-        load(users[f[:-5]])
+    if f.endswith('.u'):
+        us[f[:-5]] = [f[:-5], None, [], {}]
+        load(us[f[:-5]])
 
 
 class H(BaseHTTPRequestHandler):
     def __init__(self, *args, **kwargs):
         super(H, self).__init__(*args, **kwargs)
 
-    def get_auth_user(self):
+    def get_auth_u(self):
         cookies = SimpleCookie(self.headers.get('Cookie'))
-        if 'username' in cookies and 'session_token' in cookies:
-            username = cookies['username'].value
+        if 'uname' in cookies and 'session_token' in cookies:
+            uname = cookies['uname'].value
             session_token = cookies['session_token'].value
-            if username in users:
-                user = users[username]
+            if uname in us:
+                u = us[uname]
                 timestamp = time.time()
                 if session_token in [
-                        s[0] for s in user[2] if s[1] > timestamp
+                        s[0] for s in u[2] if s[1] > timestamp
                 ]:
-                    return user
+                    return u
         return None
 
     def get_entry_html(self, e):
@@ -80,15 +80,15 @@ class H(BaseHTTPRequestHandler):
             <body style="max-width:800px;margin:auto;padding:16px">
                 <h2>TODO</h2>''' + ('<p>' + error + '</p>' if error else '') +
                   '''<form style="float:left" action="/signup" method="post">
-                    <label for="username">Username</label>
-                    <input style="display:block" type="text" name="username">
+                    <label for="uname">Username</label>
+                    <input style="display:block" type="text" name="uname">
                     <label for="password">Password</label>
                     <input style="display:block" type="password" name="password">
                     <input type="submit" value="Signup">
                 </form> 
                 <form style="float:right" action="/login" method="post">
-                    <label for="username">Username</label>
-                    <input style="display:block" type="text" name="username">
+                    <label for="uname">Username</label>
+                    <input style="display:block" type="text" name="uname">
                     <label for="password">Password</label>
                     <input style="display:block" type="password" name="password">
                     <input type="submit" value="Login">
@@ -97,8 +97,8 @@ class H(BaseHTTPRequestHandler):
         ''', 'utf-8'))
 
     def do_GET(self):
-        user = self.get_auth_user()
-        if user:
+        u = self.get_auth_u()
+        if u:
             self.send_response(200)
             self.end_headers()
             self.wfile.write(
@@ -133,7 +133,7 @@ class H(BaseHTTPRequestHandler):
                     <ul style="padding:0">''' + ''.join([
                     '<li style="display:block;border-top:1px solid black;">' +
                     self.get_entry_html(e) + '</li>'
-                    for e in user[3].values()
+                    for e in u[3].values()
                 ]) + '''</ul>
                     <form action="/new_entry" method="post">
                         <input style="width:100%;margin-right:-45px;padding-right:45px" type="text" name="label">
@@ -147,68 +147,68 @@ class H(BaseHTTPRequestHandler):
         self.end_headers()
         self.render_home()
 
-    def create_session_cookie(self, user):
+    def create_session_cookie(self, u):
         session_token = secrets.token_urlsafe()
-        user[2].append((session_token, time.time() + 7**8))
+        u[2].append((session_token, time.time() + 7**8))
         cookie = SimpleCookie()
-        cookie['username'] = user[0]
+        cookie['uname'] = u[0]
         cookie['session_token'] = session_token
         return cookie
 
     def do_POST(self):
         content_len = int(self.headers.get('Content-Length'))
         body = parse_qs(self.rfile.read(content_len))
-        user = self.get_auth_user()
-        username = body.get(b'username', [b''])[0].decode('utf-8')
+        u = self.get_auth_u()
+        uname = body.get(b'uname', [b''])[0].decode('utf-8')
         password = body.get(b'password', [b''])[0].decode('utf-8')
         cookie = err = None
 
         if self.path == '/login':
-            if username in users:
-                user = users[username]
-                if pbkdf2_sha256.verify(password, user[1]):
-                    cookie = self.create_session_cookie(user)
+            if uname in us:
+                u = us[uname]
+                if pbkdf2_sha256.verify(password, u[1]):
+                    cookie = self.create_session_cookie(u)
                 else:
                     err = (401, 'Username or password incorrect')
             else:
                 err = (404, 'Username or password incorrect')
         elif self.path == '/signup':
-            if username in users:
-                err = (400, 'Username \'' + username + '\' already taken')
+            if uname in us:
+                err = (400, 'Username \'' + uname + '\' already taken')
             else:
                 pass_hash = pbkdf2_sha256.encrypt(
                     password, rounds=200000, salt_size=16)
-                user = [username, pass_hash, [], {}]
-                users[username] = user
-                cookie = self.create_session_cookie(users[username])
+                u = [uname, pass_hash, [], {}]
+                us[uname] = u
+                cookie = self.create_session_cookie(us[uname])
         elif self.path == '/logout':
             cookie = SimpleCookie()
             cookie['session_token'] = ''
         elif self.path == '/reset_password':
-            if user:
+            if u:
                 if pbkdf2_sha256.verify(body[b'password'][0].decode('utf-8'),
-                                        user[1]):
-                    user.pass_hash = pbkdf2_sha256.encrypt(
+                                        u[1]):
+                    u.pass_hash = pbkdf2_sha256.encrypt(
                         body[b'new_password'][0].decode('utf-8'),
                         rounds=200000,
                         salt_size=16)
-                    user[2] = []
+                    u[2] = []
                 else:
                     self.send_response(401)
                     self.end_headers()
                     self.wfile.write(b'<p>Password incorrect</p>')
                     return
         elif self.path == '/new_entry':
-            if user:
+            if u:
                 label = body[b'label'][0].decode('utf-8')
                 id = str(uuid.uuid4())
-                user[3][id] = [id, label, False]
+                u[3][id] = [id, label, False]
         elif self.path.startswith('/e_t') or self.path.startswith('/e_d'):
             id = self.path.split('/', 2)[2]
             if self.path.startswith('/e_t'):
-                user[3][id][2] = not user[3][id][2]
+                u[3][id][2] = not u[3][id][2]
             else:
-                del user[3][id]
+                del u[3][id]
         else:
             err = (404, '')
 
@@ -217,7 +217,7 @@ class H(BaseHTTPRequestHandler):
             self.end_headers()
             self.render_home(err[1])
         else:
-            save(user)
+            save(u)
             self.send_response(301)
             if cookie:
                 self.send_header('Set-Cookie', cookie.output(header='', sep=''))
