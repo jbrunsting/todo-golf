@@ -52,78 +52,72 @@ class H(BaseHTTPRequestHandler):
                 + b + '</body>', 'utf-8'))
 
     def render_home(self, error=None):
-        self.write_html('<h2>TODO</h2>' +
-                        ('<p>' + error + '</p>' if error else '') + '''
-            <form style="float:left" action="/signup" method="post">
-                <label for="uname">Username</label>
-                <input style="display:block" type="text" name="uname">
-                <label for="password">Password</label>
-                <input style="display:block" type="password" name="password">
-                <input type="submit" value="Signup">
-            </form> 
-            <form style="float:right" action="/login" method="post">
-                <label for="uname">Username</label>
-                <input style="display:block" type="text" name="uname">
-                <label for="password">Password</label>
-                <input style="display:block" type="password" name="password">
-                <input type="submit" value="Login">
-            </form>''')
+        form = '''
+        <form style="float:left" action="/signup" method="post">
+            <label for="uname">Username</label>
+            <input style="display:block" type="text" name="uname">
+            <label for="password">Password</label>
+            <input style="display:block" type="password" name="password">
+            <input type="submit" value="Signup">
+        </form>'''
+        self.write_html('<h2>TODO</h2>' + (
+            '<p>' + error + '</p>'
+            if error else '') + form + form.replace('left', 'right').replace(
+                'signup', 'login').replace('Signup', 'Login'))
 
     def do_GET(self):
         u = self.get_u()
-        if u:
-            self.send_response(200)
-            self.end_headers()
-            self.write_html('''
-                    <style>
-                        input:checked ~ div {
-                            display: block;
-                        }
-                        div {
-                            display: none;
-                        }
-                    </style>
-                    <label>
-                        <input style="display:none" type="checkbox"/>
-                        <h2 style="display:inline-block;margin:0">TODO</h2>
-                        <p style="cursor:pointer;float:right;margin:8px">&#9881</p>
-                        <div>
-                            <form action="/logout" method="post">
-                                <input style="float:right" type="submit" value="Logout">
-                            </form> 
-                            <form action="/reset_password" method="post">
-                                <label for="password">Password</label>
-                                <input style="display:block" type="password" name="password">
-                                <label for="new_password">New password</label>
-                                <input style="display:block" type="password" name="new_password">
-                                <input type="submit" value="Reset password">
-                            </form> 
-                        </div>
-                    </label>
-                    <ul style="padding:0">''' + ''.join([
-                '<li style="display:block;border-top:1px solid black;">' + '''
-                    <form style="display:inline-block" action="/e_t/''' +
-                e[0] + '''" method="post">
-                        <input style="background:none;border:none;cursor:pointer" type="submit" value="&#974'''
-                + str(4 + int(e[2])) + '''">
-                    </form>
-                    <p style="display:inline-block;width:calc(100% - 100px);overflow-wrap:break-word;text-decoration:'''
-                + ('line-through' if e[2] else '') + '''">''' + e[1] + '''</p> 
-                    <form style="display:inline-block;float:right;margin:16px" action="/e_d/'''
-                + e[0] + '''" method="post">
-                        <input style="background:none;border:none;cursor:pointer" type="submit" value='x'>
-                    </form>
-                    ''' + '</li>' for e in u[3].values()
-            ]) + '''</ul>
-                    <form action="/new_entry" method="post">
-                        <input style="width:100%;margin-right:-45px;padding-right:45px" type="text" name="label">
-                        <input style="width:35px;padding:0;margin:0;cursor:pointer;background:none;border:none" type="submit" value="+">
-                    </form>''')
-            return
-
         self.send_response(200)
         self.end_headers()
-        self.render_home()
+        if not u:
+            self.render_home()
+            return
+
+        self.write_html('''
+        <style>
+            input:checked ~ div {
+                display: block;
+            }
+            div {
+                display: none;
+            }
+        </style>
+        <label>
+            <input style="display:none" type="checkbox"/>
+            <h2 style="display:inline-block;margin:0">TODO</h2>
+            <p style="cursor:pointer;float:right;margin:8px">&#9881</p>
+            <div>
+                <form action="/logout" method="post">
+                    <input style="float:right" type="submit" value="Logout">
+                </form> 
+                <form action="/reset_password" method="post">
+                    <label for="password">Password</label>
+                    <input style="display:block" type="password" name="password">
+                    <label for="new_password">New password</label>
+                    <input style="display:block" type="password" name="new_password">
+                    <input type="submit" value="Reset password">
+                </form> 
+            </div>
+        </label>
+        <ul style="padding:0">''' + ''.join([
+            '<li style="display:block;border-top:1px solid black;">' + '''
+                <form style="display:inline-block" action="/e_t/''' + e[0] +
+            '''" method="post">
+                    <input style="background:none;border:none;cursor:pointer" type="submit" value="&#974'''
+            + str(4 + int(e[2])) + '''">
+                </form>
+                <p style="display:inline-block;width:calc(100% - 100px);overflow-wrap:break-word;text-decoration:'''
+            + ('line-through' if e[2] else '') + '''">''' + e[1] + '''</p> 
+                <form style="display:inline-block;float:right;margin:16px" action="/e_d/'''
+            + e[0] + '''" method="post">
+                    <input style="background:none;border:none;cursor:pointer" type="submit" value='x'>
+                </form>
+                ''' + '</li>' for e in u[3].values()
+        ]) + '''</ul>
+        <form action="/new_entry" method="post">
+            <input style="width:100%;margin-right:-45px;padding-right:45px" type="text" name="label">
+            <input style="width:35px;padding:0;margin:0;cursor:pointer;background:none;border:none" type="submit" value="+">
+        </form>''')
 
     def create_session_cookie(self, u):
         session_token = secrets.token_urlsafe()
