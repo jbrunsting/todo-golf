@@ -37,23 +37,22 @@ us = {}
 
 for f in os.listdir('.'):
     if f.endswith('.u'):
-        us[f[:-5]] = [f[:-5], None, [], {}]
-        load(us[f[:-5]])
+        us[f[:-2]] = [f[:-2], None, [], {}]
+        load(us[f[:-2]])
 
 
 class H(BaseHTTPRequestHandler):
     def __init__(self, *args, **kwargs):
         super(H, self).__init__(*args, **kwargs)
 
-    def get_auth_u(self):
+    def get_u(self):
         cookies = SimpleCookie(self.headers.get('Cookie'))
         if 'uname' in cookies and 'session_token' in cookies:
             uname = cookies['uname'].value
-            session_token = cookies['session_token'].value
             if uname in us:
                 u = us[uname]
                 timestamp = time.time()
-                if session_token in [
+                if cookies['session_token'].value in [
                         s[0] for s in u[2] if s[1] > timestamp
                 ]:
                     return u
@@ -97,7 +96,7 @@ class H(BaseHTTPRequestHandler):
         ''', 'utf-8'))
 
     def do_GET(self):
-        u = self.get_auth_u()
+        u = self.get_u()
         if u:
             self.send_response(200)
             self.end_headers()
@@ -158,7 +157,7 @@ class H(BaseHTTPRequestHandler):
     def do_POST(self):
         content_len = int(self.headers.get('Content-Length'))
         body = parse_qs(self.rfile.read(content_len))
-        u = self.get_auth_u()
+        u = self.get_u()
         uname = body.get(b'uname', [b''])[0].decode('utf-8')
         password = body.get(b'password', [b''])[0].decode('utf-8')
         cookie = err = None
