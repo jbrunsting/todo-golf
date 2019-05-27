@@ -28,6 +28,8 @@ class User:
     def save(self):
         f = open(self.username + '.user', 'w+')
         f.write(self.pass_hash + '\n')
+        timestamp = time.time()
+        self.sessions = [s for s in self.sessions if s[1] > timestamp]
         f.write(str(len(self.sessions)) + '\n')
         for s in self.sessions:
             f.write(s[0].replace('\n', '\a') + ',' + str(s[1]) + '\n')
@@ -42,7 +44,7 @@ class User:
         ns = int(f.readline())
         for i in range(ns):
             s = f.readline()[:-1].split(',', 1)
-            self.sessions.append((s[0].replace('\a', '\n'), s[1]))
+            self.sessions.append((s[0].replace('\a', '\n'), float(s[1])))
         self.entries = {}
         ne = int(f.readline()[:-1])
         for i in range(ne):
@@ -71,7 +73,7 @@ class H(BaseHTTPRequestHandler):
                 user = users[username]
                 timestamp = time.time()
                 if session_token in [
-                        s[0] for s in user.sessions if float(s[1]) > timestamp
+                        s[0] for s in user.sessions if s[1] > timestamp
                 ]:
                     return user
         return None
@@ -79,22 +81,26 @@ class H(BaseHTTPRequestHandler):
     def get_entry_html(self, e):
         return '''
         <form style="display:inline-block" action="/toggle_done/''' + e.id + '''" method="post">
-            <input style="background:none;border:none;cursor:pointer" type="submit" value="''' + ('&#9745' if e.done else '&#9744') + '''">
+            <input style="background:none;border:none;cursor:pointer" type="submit" value="''' + (
+            '&#9745' if e.done else '&#9744') + '''">
         </form>
-        <p style="display:inline-block;width:calc(100% - 100px);overflow-wrap:break-word;text-decoration:''' + ('line-through' if e.done else '') + '''">''' + e.label + '''</p> 
+        <p style="display:inline-block;width:calc(100% - 100px);overflow-wrap:break-word;text-decoration:''' + (
+                'line-through'
+                if e.done else '') + '''">''' + e.label + '''</p> 
         <form style="display:inline-block;float:right;margin:16px" action="/delete_entry/''' + e.id + '''" method="post">
             <input style="background:none;border:none;cursor:pointer" type="submit" value='x'>
         </form>
         '''
 
     def render_home(self, error=None):
-        self.wfile.write(bytes('''
+        self.wfile.write(
+            bytes('''
             <html>
                 <head><title>TD</title></head>
                 <body style="max-width:800px;margin:auto;padding:16px">
-                    <h2>TODO</h2>''' +
-                    ('<p>' + error + '</p>' if error else '')
-                    + '''<form style="float:left" action="/signup" method="post">
+                    <h2>TODO</h2>''' + ('<p>' + error + '</p>'
+                                        if error else '') +
+                  '''<form style="float:left" action="/signup" method="post">
                         <label for="username">Username</label>
                         <input style="display:block" type="text" name="username">
                         <label for="password">Password</label>
@@ -148,7 +154,8 @@ class H(BaseHTTPRequestHandler):
                             </div>
                         </label>
                         <ul style="padding:0">''' + ''.join([
-                            '<li style="display:block;border-top:1px solid black;">' + self.get_entry_html(e) + '</li>'
+                    '<li style="display:block;border-top:1px solid black;">' +
+                    self.get_entry_html(e) + '</li>'
                     for e in user.entries.values()
                 ]) + '''</ul>
                         <form action="/new_entry" method="post">
