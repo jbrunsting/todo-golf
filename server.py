@@ -95,27 +95,24 @@ class H(BaseHTTPRequestHandler):
     def render_home(self, error=None):
         self.wfile.write(
             bytes('''
-            <html>
-                <head><title>TD</title></head>
-                <body style="max-width:800px;margin:auto;padding:16px">
-                    <h2>TODO</h2>''' + ('<p>' + error + '</p>'
-                                        if error else '') +
+            <title>TD</title>
+            <body style="max-width:800px;margin:auto;padding:16px">
+                <h2>TODO</h2>''' + ('<p>' + error + '</p>' if error else '') +
                   '''<form style="float:left" action="/signup" method="post">
-                        <label for="username">Username</label>
-                        <input style="display:block" type="text" name="username">
-                        <label for="password">Password</label>
-                        <input style="display:block" type="password" name="password">
-                        <input type="submit" value="Signup">
-                    </form> 
-                    <form style="float:right" action="/login" method="post">
-                        <label for="username">Username</label>
-                        <input style="display:block" type="text" name="username">
-                        <label for="password">Password</label>
-                        <input style="display:block" type="password" name="password">
-                        <input type="submit" value="Login">
-                    </form> 
-                </body>
-            </html>
+                    <label for="username">Username</label>
+                    <input style="display:block" type="text" name="username">
+                    <label for="password">Password</label>
+                    <input style="display:block" type="password" name="password">
+                    <input type="submit" value="Signup">
+                </form> 
+                <form style="float:right" action="/login" method="post">
+                    <label for="username">Username</label>
+                    <input style="display:block" type="text" name="username">
+                    <label for="password">Password</label>
+                    <input style="display:block" type="password" name="password">
+                    <input type="submit" value="Login">
+                </form> 
+            </body>
         ''', 'utf-8'))
 
     def do_GET(self):
@@ -125,45 +122,43 @@ class H(BaseHTTPRequestHandler):
             self.end_headers()
             self.wfile.write(
                 bytes('''
-                <html>
-                    <head><title>TD</title></head>
-                    <body style="max-width:800px;margin:auto;padding:16px">
-                        <style>
-                            input:checked ~ div {
-                                display: block;
-                            }
-                            div {
-                                display: none;
-                            }
-                        </style>
-                        <label>
-                            <input style="display:none" type="checkbox"/>
-                            <h2 style="display:inline-block;margin:0">TODO</h2>
-                            <p style="cursor:pointer;float:right;margin:8px">&#9881</p>
-                            <div>
-                                <form action="/logout" method="post">
-                                    <input style="float:right" type="submit" value="Logout">
-                                </form> 
-                                <form action="/reset_password" method="post">
-                                    <label for="password">Password</label>
-                                    <input style="display:block" type="password" name="password">
-                                    <label for="new_password">New password</label>
-                                    <input style="display:block" type="password" name="new_password">
-                                    <input type="submit" value="Reset password">
-                                </form> 
-                            </div>
-                        </label>
-                        <ul style="padding:0">''' + ''.join([
+                <title>TD</title>
+                <body style="max-width:800px;margin:auto;padding:16px">
+                    <style>
+                        input:checked ~ div {
+                            display: block;
+                        }
+                        div {
+                            display: none;
+                        }
+                    </style>
+                    <label>
+                        <input style="display:none" type="checkbox"/>
+                        <h2 style="display:inline-block;margin:0">TODO</h2>
+                        <p style="cursor:pointer;float:right;margin:8px">&#9881</p>
+                        <div>
+                            <form action="/logout" method="post">
+                                <input style="float:right" type="submit" value="Logout">
+                            </form> 
+                            <form action="/reset_password" method="post">
+                                <label for="password">Password</label>
+                                <input style="display:block" type="password" name="password">
+                                <label for="new_password">New password</label>
+                                <input style="display:block" type="password" name="new_password">
+                                <input type="submit" value="Reset password">
+                            </form> 
+                        </div>
+                    </label>
+                    <ul style="padding:0">''' + ''.join([
                     '<li style="display:block;border-top:1px solid black;">' +
                     self.get_entry_html(e) + '</li>'
                     for e in user.entries.values()
                 ]) + '''</ul>
-                        <form action="/new_entry" method="post">
-                            <input style="width:100%;margin-right:-45px;padding-right:45px" type="text" name="label">
-                            <input style="width:35px;padding:0;margin:0;cursor:pointer;background:none;border:none" type="submit" value="+">
-                        </form> 
-                    </body>
-                </html>
+                    <form action="/new_entry" method="post">
+                        <input style="width:100%;margin-right:-45px;padding-right:45px" type="text" name="label">
+                        <input style="width:35px;padding:0;margin:0;cursor:pointer;background:none;border:none" type="submit" value="+">
+                    </form> 
+                </body>
             ''', 'utf-8'))
             return
 
@@ -171,7 +166,7 @@ class H(BaseHTTPRequestHandler):
         self.end_headers()
         self.render_home()
 
-    def create_session(self, user):
+    def create_session_cookie(self, user):
         session_token = secrets.token_urlsafe()
         user.sessions.append((session_token, time.time() + 60 * 60 * 24 * 30))
         cookie = SimpleCookie()
@@ -193,10 +188,9 @@ class H(BaseHTTPRequestHandler):
                 self.end_headers()
                 self.render_home('Username or password incorrect')
                 return
-
             user = users[username]
             if pbkdf2_sha256.verify(password, user.pass_hash):
-                cookie = self.create_session(user)
+                cookie = self.create_session_cookie(user)
             else:
                 self.send_response(401)
                 self.end_headers()
@@ -212,7 +206,7 @@ class H(BaseHTTPRequestHandler):
                 pass_hash = pbkdf2_sha256.encrypt(
                     password, rounds=200000, salt_size=16)
                 users[username] = User(username, pass_hash)
-                cookie = self.create_session(users[username])
+                cookie = self.create_session_cookie(users[username])
         elif self.path == '/logout':
             cookie = SimpleCookie()
             cookie['session_token'] = ''
