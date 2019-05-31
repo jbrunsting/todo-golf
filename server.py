@@ -123,17 +123,13 @@ class H(BaseHTTPRequestHandler):
         c = err = None
 
         if self.path == '/Login':
-            if a in us:
-                u = us[a]
-                if pbkdf2_sha256.verify(b, us[a][0]):
-                    c = self.create_session_cookie(a)
-                else:
-                    err = (401, 'Username or password incorrect')
+            if a in us and pbkdf2_sha256.verify(b, us[a][0]):
+                u, c = us[a], self.create_session_cookie(a)
             else:
-                err = (404, 'Username or password incorrect')
+                err = 'Username or password incorrect'
         elif self.path == '/Signup':
             if a in us:
-                err = (400, 'Username \'' + a + '\' already taken')
+                err = 'Username %s already taken' % (a)
             else:
                 us[a] = [
                     a,
@@ -142,32 +138,27 @@ class H(BaseHTTPRequestHandler):
                 u, c = us[a], self.create_session_cookie(a)
         elif self.path == '/l':
             c, c['a'], c['b'] = SimpleCookie(), '', ''
-        elif self.path == '/r':
-            if u:
-                if pbkdf2_sha256.verify(body[b'b'][0].decode(), u[0]):
-                    u[0] = pbkdf2_sha256.encrypt(
-                        body[b'c'][0].decode(d), rounds=r, salt_size=16)
-                    u[1] = []
-                else:
-                    self.send_response(401)
-                    self.end_headers()
-                    return self.wfile.write(b'<p>Password incorrect</p>')
-        elif self.path == '/n':
-            if u:
-                id = str(uuid.uuid4())
-                u[2][id] = [id, body[b'l'][0].decode(d), False]
-        elif self.path.startswith('/e_t') or self.path.startswith('/e_d'):
+        if u and self.path == '/r':
+            if pbkdf2_sha256.verify(body[b'b'][0].decode(), u[0]):
+                u[0] = pbkdf2_sha256.encrypt(
+                    body[b'c'][0].decode(d), rounds=r, salt_size=16)
+                u[1] = []
+            else:
+                self.send_response(401)
+                self.end_headers()
+                return self.wfile.write(b'<p>Password incorrect</p>')
+        if u and self.path == '/n':
+            id = str(uuid.uuid4())
+            u[2][id] = [id, body[b'l'][0].decode(d), False]
+        if u and self.path.startswith('/e_t') or self.path.startswith('/e_d'):
             id = self.path.split('/', 2)[2]
             u[2][id][2] = not u[2][id][2]
             if self.path.startswith('/e_d'):
                 del u[2][id]
-        else:
-            err = (404, '')
-
         if err:
-            self.send_response(err[0])
+            self.send_response(200)
             self.end_headers()
-            self.render_home(err[1])
+            self.render_home(err)
         else:
             f = open(a + '.u', 'w+')
             f.write(u[0] + '\n')
