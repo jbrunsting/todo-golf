@@ -1,29 +1,26 @@
 #!/usr/bin/python3
 
-from http.server import HTTPServer, BaseHTTPRequestHandler
-from http.cookies import SimpleCookie
-from urllib.parse import parse_qs
-from passlib.hash import pbkdf2_sha256
-
+import os
 import secrets
 import time
 import uuid
-import os
+from http.cookies import SimpleCookie
+from http.server import BaseHTTPRequestHandler, HTTPServer
+from urllib.parse import parse_qs
+
+from passlib.hash import pbkdf2_sha256
 
 d = 'utf-8'
 us = {}
 
-for f in os.listdir('.'):
-    if not f.endswith('.u'): continue
-    u = [f[:-2], None, [], {}]
-    us[f[:-2]] = u
-    f = open(u[0] + '.u', 'r')
-    u[1] = f.readline()[:-1]
-    u[2] = []
+for n in os.listdir('.'):
+    if not n.endswith('.u'): continue
+    f = open(n[:-2] + '.u', 'r')
+    u = [n[:-2], f.readline()[:-1], [], {}]
+    us[u[0]] = u
     for i in range(int(f.readline())):
         s = f.readline()[:-1].split(',', 1)
         u[2].append((s[0].replace('\a', '\n'), float(s[1])))
-    u[3] = {}
     for i in range(int(f.readline())):
         e = f.readline()[:-1].split(',', 2)
         u[3][e[1]] = [e[1], e[2], e[0] == 'True']
@@ -34,15 +31,13 @@ class H(BaseHTTPRequestHandler):
         super(H, self).__init__(*args, **kwargs)
 
     def get_u(self):
-        cookies = SimpleCookie(self.headers.get('Cookie'))
-        if 'a' in cookies and 'b' in cookies:
-            a = cookies['a'].value
+        cs = SimpleCookie(self.headers.get('Cookie'))
+        if 'a' in cs and 'b' in cs:
+            a = cs['a'].value
             if a in us:
                 u = us[a]
                 timestamp = time.time()
-                if cookies['b'].value in [
-                        s[0] for s in u[2] if s[1] > timestamp
-                ]:
+                if cs['b'].value in [s[0] for s in u[2] if s[1] > timestamp]:
                     return u
         return None
 
@@ -55,9 +50,9 @@ class H(BaseHTTPRequestHandler):
     def render_home(self, error=None):
         form = '''
         <form style="float:left" action="/Signup" method="post">
-            <label for="a">Username</label>
+            Username
             <input style="display:block" type="text" name="a">
-            <label for="b">Password</label>
+            Password
             <input style="display:block" type="password" name="b">
             <input type="submit" value="Signup">
         </form>'''
@@ -75,12 +70,8 @@ class H(BaseHTTPRequestHandler):
 
         self.write_html('''
         <style>
-            input:checked ~ div {
-                display: block;
-            }
-            div {
-                display: none;
-            }
+            input:checked~div{display: block}
+            div{display:none}
         </style>
         <label>
             <input style="display:none" type="checkbox"/>
@@ -91,9 +82,9 @@ class H(BaseHTTPRequestHandler):
                     <input style="float:right" type="submit" value="Logout">
                 </form> 
                 <form action="/r" method="post">
-                    <label for="b">Password</label>
+                    Password
                     <input style="display:block" type="password" name="b">
-                    <label for="c">New password</label>
+                    New password
                     <input style="display:block" type="password" name="c">
                     <input type="submit" value="Reset password">
                 </form> 
@@ -115,30 +106,28 @@ class H(BaseHTTPRequestHandler):
                 ''' + '</li>' for e in u[3].values()
         ]) + '''</ul>
         <form action="/n" method="post">
-            <input style="width:100%;margin-right:-45px;padding-right:45px" type="text" name="label">
+            <input style="width:100%;margin-right:-45px;padding-right:45px" type="text" name="l">
             <input style="width:35px;padding:0;margin:0;cursor:pointer;background:none;border:none" type="submit" value="+">
         </form>''')
 
     def create_session_cookie(self, u):
         b = secrets.token_urlsafe()
         u[2].append((b, time.time() + 7**8))
-        cookie = SimpleCookie()
-        cookie['a'] = u[0]
-        cookie['b'] = b
-        return cookie
+        c, c['a'], c['b'] = SimpleCookie(), u[0], b
+        return c
 
     def do_POST(self):
-        content_len = int(self.headers.get('Content-Length'))
-        body = parse_qs(self.rfile.read(content_len))
-        u = self.get_u()
+        body, u = parse_qs(
+            self.rfile.read(int(
+                self.headers.get('Content-Length')))), self.get_u()
         a, b = [body.get(c, [b''])[0].decode(d) for c in [b'a', b'b']]
-        cookie = err = None
+        c = err = None
 
         if self.path == '/Login':
             if a in us:
                 u = us[a]
-                if pbkdf2_sha256.verify(b, u[1]):
-                    cookie = self.create_session_cookie(u)
+                if pbkdf2_sha256.verify(b, us[a][1]):
+                    c = self.create_session_cookie(us[a])
                 else:
                     err = (401, 'Username or password incorrect')
             else:
@@ -149,17 +138,15 @@ class H(BaseHTTPRequestHandler):
             else:
                 pass_hash = pbkdf2_sha256.encrypt(
                     b, rounds=200000, salt_size=16)
-                u = [a, pass_hash, [], {}]
-                us[a] = u
-                cookie = self.create_session_cookie(us[a])
+                us[a] = [a, pass_hash, [], {}]
+                u = us[a]
+                c = self.create_session_cookie(us[a])
         elif self.path == '/l':
-            cookie = SimpleCookie()
-            cookie['a'] = ''
-            cookie['b'] = ''
+            c, c['a'], c['b'] = SimpleCookie(), '', ''
         elif self.path == '/r':
             if u:
                 if pbkdf2_sha256.verify(body[b'b'][0].decode(), u[1]):
-                    u.pass_hash = pbkdf2_sha256.encrypt(
+                    u[1] = pbkdf2_sha256.encrypt(
                         body[b'c'][0].decode(d), rounds=200000, salt_size=16)
                     u[2] = []
                 else:
@@ -169,9 +156,8 @@ class H(BaseHTTPRequestHandler):
                     return
         elif self.path == '/n':
             if u:
-                label = body[b'label'][0].decode(d)
                 id = str(uuid.uuid4())
-                u[3][id] = [id, label, False]
+                u[3][id] = [id, body[b'l'][0].decode(d), False]
         elif self.path.startswith('/e_t') or self.path.startswith('/e_d'):
             id = self.path.split('/', 2)[2]
             u[3][id][2] = not u[3][id][2]
@@ -196,9 +182,8 @@ class H(BaseHTTPRequestHandler):
                         str(e[2]) + ',' + e[0] + ',' + e[1] + '\n'
                         for e in u[3].values()))
             self.send_response(301)
-            if cookie:
-                self.send_header('Set-Cookie', cookie.output(
-                    header='', sep=''))
+            if c:
+                self.send_header('Set-Cookie', c.output(header='', sep=''))
             self.send_header('Location', '/')
             self.end_headers()
 
