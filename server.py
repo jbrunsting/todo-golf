@@ -47,16 +47,18 @@ def w(s, b):
 
 
 def h(s, error=None):
-    form = '''
-    <form style="float:left" action="/Signup" method="post">
-        Username
-        <input style="display:block" type="text" name="a">
-        Password
-        <input style="display:block" type="password" name="b">
-        <input type="submit" value="Signup">
-    </form>'''
+    form = c(
+        ')Signup" style="float:left">Username<input style="display:block" type="text" name="a">Password<input style="display:block" type="password" name="b">(value="Signup"></form>'
+    )
     w(s, '<h2>TODO</h2>' + ('<p>' + error + '</p>' if error else '') + form +
       form.replace('left', 'right').replace('Signup', 'Login'))
+
+
+def c(s):
+    return s.replace('^', 'display:inline-block;').replace(
+        '@', 'background:none;border:none;cursor:pointer').replace(
+            '(', '<input type="submit" ').replace(
+                ')', '<form method="post" action="/')
 
 
 def g(s):
@@ -66,47 +68,46 @@ def g(s):
     if not u:
         return h(s)
 
-    w(s, '''
-    <style>
-        input:checked~div{display: block}
-        div{display:none}
-        input{display:block}
-    </style>
-    <label>
-        <input style="display:none" type="checkbox"/>
-        <h2 style="display:inline-block;margin:0">TODO</h2>
-        <p style="cursor:pointer;float:right;margin:8px">&#9881</p>
-        <div>
-            <form action="/l" method="post">
-                <input style="float:right" type="submit" value="Logout">
-            </form> 
-            <form action="/r" method="post">
-                Password
-                <input type="password" name="b">
-                New password
-                <input type="password" name="c">
-                <input type="submit" value="Reset password">
-            </form> 
-        </div>
-    </label>
-    <ul style="padding:0">''' + ''.join([
-        '<li style="display:block;border-top:1px solid black;"><form style="display:inline-block" action="/e_t/'
-        + k +
-        '" method="post"><input style="background:none;border:none;cursor:pointer" type="submit" value="&#974'
-        + str(4 + int(e[1])) + '''">
-            </form>
-            <p style="display:inline-block;width:calc(100% - 100px);overflow-wrap:break-word;text-decoration:'''
-        + ('line-through' if e[1] else '') + '''">''' + e[0] + '''</p>
-            <form style="display:inline-block;float:right;margin:16px" action="/e_d/'''
-        + k + '''" method="post">
-                <input style="background:none;border:none;cursor:pointer" type="submit" value='x'>
-            </form>
-            ''' + '</li>' for k, e in u[2].items()
-    ]) + '''</ul>
-    <form action="/n" method="post">
-        <input style="display:inline-block;width:100%;margin-right:-45px;padding-right:45px" type="text" name="l">
-        <input style="display:inline-block;cursor:pointer;background:none;border:none" type="submit" value="+">
-    </form>''')
+    w(s,
+      c('''
+<style>
+input:checked~div{display: block}
+div{display:none}
+input{display:block}
+</style>
+<label>
+<input type="checkbox" style="display:none"/>
+<h2 style="^margin:0">TODO</h2>
+<p style="cursor:pointer;float:right;margin:8px">&#9881</p>
+<div>
+)l">
+(style="float:right" value="Logout">
+</form> 
+)r">
+Password
+<input type="password" name="b">
+New password
+<input type="password" name="c">
+(value="Reset password">
+</form> 
+</div>
+</label>
+<ul style="padding:0">''') + ''.join([
+          c('<li style="display:block;border-top:1px solid black;">)e_t/') +
+          k + c('" style="^">(style="@" value="&#974') + str(4 + int(e[1])) +
+          c('''">
+</form>
+<p style="^width:calc(100% - 100px);overflow-wrap:break-word;text-decoration:'''
+            ) + ('line-through' if e[1] else '') + '''">''' + e[0] + c('''</p>
+)e_d/''') + k + c('''" style="^float:right;margin:16px">
+(style="@" value='x'>
+</form>
+''') + '</li>' for k, e in u[2].items()
+      ]) + c('''</ul>
+)n">
+<input type="text" style="^width:100%;margin-right:-45px;padding-right:45px" name="l">
+(style="^@" value="+">
+</form>'''))
 
 
 def create_session_cookie(a):
