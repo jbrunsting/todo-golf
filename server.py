@@ -39,8 +39,8 @@ class H(BaseHTTPRequestHandler):
                 u = us[a]
                 timestamp = time.time()
                 if cs['b'].value in [s[0] for s in u[1] if s[1] > timestamp]:
-                    return u
-        return None
+                    return (u, a)
+        return (None, None)
 
     def write_html(self, b):
         return self.wfile.write(
@@ -62,7 +62,7 @@ class H(BaseHTTPRequestHandler):
         ) + form + form.replace('left', 'right').replace('Signup', 'Login'))
 
     def do_GET(self):
-        u = self.get_u()
+        u, a = self.get_u()
         self.send_response(200)
         self.end_headers()
         if not u:
@@ -72,6 +72,7 @@ class H(BaseHTTPRequestHandler):
         <style>
             input:checked~div{display: block}
             div{display:none}
+            input{display:block}
         </style>
         <label>
             <input style="display:none" type="checkbox"/>
@@ -83,9 +84,9 @@ class H(BaseHTTPRequestHandler):
                 </form> 
                 <form action="/r" method="post">
                     Password
-                    <input style="display:block" type="password" name="b">
+                    <input type="password" name="b">
                     New password
-                    <input style="display:block" type="password" name="c">
+                    <input type="password" name="c">
                     <input type="submit" value="Reset password">
                 </form> 
             </div>
@@ -105,8 +106,8 @@ class H(BaseHTTPRequestHandler):
                 ''' + '</li>' for e in u[2].values()
         ]) + '''</ul>
         <form action="/n" method="post">
-            <input style="width:100%;margin-right:-45px;padding-right:45px" type="text" name="l">
-            <input style="width:35px;padding:0;margin:0;cursor:pointer;background:none;border:none" type="submit" value="+">
+            <input style="display:inline-block;width:100%;margin-right:-45px;padding-right:45px" type="text" name="l">
+            <input style="display:inline-block;cursor:pointer;background:none;border:none" type="submit" value="+">
         </form>''')
 
     def create_session_cookie(self, a):
@@ -116,29 +117,28 @@ class H(BaseHTTPRequestHandler):
         return c
 
     def do_POST(self):
-        body, u = parse_qs(
+        body, u, p = parse_qs(
             self.rfile.read(int(
-                self.headers.get('Content-Length')))), self.get_u()
+                self.headers.get('Content-Length')))), self.get_u(), self.path
+        u, n = u
         a, b = [body.get(c, [b''])[0].decode(d) for c in [b'a', b'b']]
         c = err = None
-
-        if self.path == '/Login':
+        if p == '/Login':
             if a in us and pbkdf2_sha256.verify(b, us[a][0]):
                 u, c = us[a], self.create_session_cookie(a)
             else:
                 err = 'Username or password incorrect'
-        elif self.path == '/Signup':
+        elif p == '/Signup':
             if a in us:
                 err = 'Username %s already taken' % (a)
             else:
                 us[a] = [
-                    a,
                     pbkdf2_sha256.encrypt(b, rounds=r, salt_size=16), [], {}
                 ]
                 u, c = us[a], self.create_session_cookie(a)
-        elif self.path == '/l':
+        elif p == '/l':
             c, c['a'], c['b'] = SimpleCookie(), '', ''
-        if u and self.path == '/r':
+        if u and p == '/r':
             if pbkdf2_sha256.verify(body[b'b'][0].decode(), u[0]):
                 u[0] = pbkdf2_sha256.encrypt(
                     body[b'c'][0].decode(d), rounds=r, salt_size=16)
@@ -147,20 +147,21 @@ class H(BaseHTTPRequestHandler):
                 self.send_response(401)
                 self.end_headers()
                 return self.wfile.write(b'<p>Password incorrect</p>')
-        if u and self.path == '/n':
+        if u and p == '/n':
             id = str(uuid.uuid4())
             u[2][id] = [id, body[b'l'][0].decode(d), False]
-        if u and self.path.startswith('/e_t') or self.path.startswith('/e_d'):
-            id = self.path.split('/', 2)[2]
+        t = p[3:4]
+        if u and p[1:3] == 'e_':
+            id = p.split('/', 2)[2]
             u[2][id][2] = not u[2][id][2]
-            if self.path.startswith('/e_d'):
+            if t == 'd':
                 del u[2][id]
         if err:
             self.send_response(200)
             self.end_headers()
             self.render_home(err)
         else:
-            f = open(a + '.u', 'w+')
+            f = open((a or n) + '.u', 'w+')
             f.write(u[0] + '\n')
             timestamp = time.time()
             u[1] = [s for s in u[1] if s[1] > timestamp]
