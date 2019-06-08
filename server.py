@@ -5,7 +5,7 @@ import os
 import secrets
 import time
 import uuid
-from http.cookies import SimpleCookie
+from http.cookies import SimpleCookie as v
 from urllib.parse import parse_qs
 
 from passlib.hash import pbkdf2_sha256 as sha
@@ -27,7 +27,7 @@ for n in [f for f in os.listdir('.') if f.endswith('.u')]:
 
 
 def z(s):
-    c = SimpleCookie(s.headers.get('Cookie'))
+    c = v(s.headers.get('Cookie'))
     if 'a' in c and 'b' in c:
         a = c['a'].value
         if a in us and c['b'].value in [
@@ -37,30 +37,26 @@ def z(s):
     return ('', '')
 
 
-def w(s, b):
-    return s.wfile.write(
-        bytes(
-            c('<title>TODOZtitle><body]max-width:800px;W:auto;padding:16px">')
-            + b + '</body>', d))
-
-
-def h(s, e=None):
-    f = c(
-        '_uSignup"]float:left">A[text"]Fblock" nameYa">P!b"]Fblock">?valueYSignup">ZX>'
-    )
-    w(s, '<h2>TODO</h2>' + ('<p>%s</p>' % e if e else '') + f +
-      f.replace('left', c('B')).replace('Signup', 'Login'))
+w = lambda s, b: s.wfile.write(bytes(
+        c('<title>TODOZtitle><body]max-width:800px;W:auto;padding:16px">%s</body>'
+          % b), d))
 
 
 def c(s, b=0):
     if b > 5:
         return s
     for e in zip(
-            '[^@?_!]ZYXMQAWBGIF',
-            c('<I typeY|Finline-block;|background:none;border:none;M|[submit"|<X methodYpost" actionY/|Q[pQ" nameY| GY|</|="|form|cursor:pointer|assword|Username|margin|right|style|input|display:',
+            '[^@?_!]ZYXMQAWBGIFV',
+            c('<I typeY|Finline-block;|background:none;border:none;M|[submit"|<X methodYpost" actionY/|Q[pQ" nameY| GY|</|="|form|cursor:pointer|assword|Username|margin|right|style|input|display:|Signup',
               b + 1).split('|')):
         s = s.replace(*e)
     return s
+
+
+f = c('_uV"]float:left">A[text"]Fblock" nameYa">P!b"]Fblock">?valueYV">ZX>')
+
+
+h = lambda s, e='' : w(s, '<h2>TODO</h2><p>%s</p>%s%s' % (e, f, f.replace('left', c('B')).replace(c('V'), 'Login')))
 
 
 def r(s, c, k=''):
@@ -90,15 +86,15 @@ def g(s):
 def x(a):
     b = secrets.token_urlsafe()
     us[a][1].append((b, time.time() + 7**8))
-    c, c['a'], c['b'] = SimpleCookie(), a, b
+    c, c['a'], c['b'] = v(), a, b
     return c
 
 
 def p(s):
-    body, u, p = parse_qs(s.rfile.read(int(
+    o, u, p = parse_qs(s.rfile.read(int(
         s.headers.get('Content-Length')))), z(s), s.path
     u, n = u
-    a, b, i = [body.get(y, [b''])[0].decode(d) for y in [b'a', b'b', b'c']]
+    a, b, i = [o.get(y, [b''])[0].decode(d) for y in [b'a', b'b', b'c']]
     y = err = None
     if p[1:3] == 'uL' and (a not in us or not sha.verify(b, us[a][0])):
         err = c('A or pQ incorrect')
@@ -110,16 +106,16 @@ def p(s):
     if (p[1:3] == 'uL' or p[1:3] == 'uS') and not err:
         u, y = us[a], x(a)
     if p == '/l':
-        y, y['a'], y['b'] = SimpleCookie(), '', ''
+        y, y['a'], y['b'] = v(), '', ''
     if u and p == '/r':
         if not sha.verify(b, u[0]):
             r(s, 401)
-            return s.wfile.write(bytes(c('<p>PQ incorrect</p>')))
+            return w(s, c('<p>PQ incorrect</p>'))
         u[0] = sha.encrypt(i, rounds=k, salt_size=16)
         u[1] = []
     if u and p == '/n':
         id = str(uuid.uuid4())
-        u[2][id] = [body[b'l'][0].decode(d), False]
+        u[2][id] = [o[b'l'][0].decode(d), False]
     if u and p[1:2] == 'e':
         id = p.split('/', 2)[2]
         u[2][id][1] = not u[2][id][1]
