@@ -40,23 +40,26 @@ def z(s):
 def w(s, b):
     return s.wfile.write(
         bytes(
-            c('<title>TODOZtitle><body]max-width:800px;margin:auto;padding:16px">'
-              ) + b + '</body>', d))
+            c('<title>TODOZtitle><body]max-width:800px;W:auto;padding:16px">')
+            + b + '</body>', d))
 
 
 def h(s, e=None):
     f = c(
-        '_uSignup"]float:left">Username[text"]display:block" name="a">P!b"]display:block">?value="Signup">Zform>'
+        '_uSignup"]float:left">A[text"]Fblock" nameYa">P!b"]Fblock">?valueYSignup">ZX>'
     )
     w(s, '<h2>TODO</h2>' + ('<p>%s</p>' % e if e else '') + f +
-      f.replace('left', 'right').replace('Signup', 'Login'))
+      f.replace('left', c('B')).replace('Signup', 'Login'))
 
 
-def c(s):
-    v = ['[', '<input type="']
-    p = '^|display:inline-block;|@|background:none;border:none;cursor:pointer|?|[submit"|_|<form method="post" action="/|!|assword[password" name="|]| style="|Z|</'.replace(*v[0:2]).split('|') + v
-    for i in range(8):
-        s = s.replace(*p[i * 2:i * 2 + 2])
+def c(s, b=0):
+    if b > 5:
+        return s
+    for e in zip(
+            '[^@?_!]ZYXMQAWBGIF',
+            c('<I typeY|Finline-block;|background:none;border:none;M|[submit"|<X methodYpost" actionY/|Q[pQ" nameY| GY|</|="|form|cursor:pointer|assword|Username|margin|right|style|input|display:',
+              b + 1).split('|')):
+        s = s.replace(*e)
     return s
 
 
@@ -74,13 +77,13 @@ def g(s):
         return h(s)
 
     w(s,
-      c('<style>input:checked~div{display:block}div{display:none}input{display:block}Zstyle><label>[checkbox"]display:none"/><h2]^margin:0">TODOZh2><p]cursor:pointer;float:right;margin:8px">&#9881Zp><div>_l">?style="float:right" value="Logout">Zform>_r">P!b">New p!c">?value="Reset password">Zform> Zdiv>Zlabel><ul]padding:0">'
+      c('<G>I:checked~div{Fblock}div{Fnone}I{Fblock}ZG><label>[checkbox"]Fnone"/><h2]^W:0">TODOZh2><p]M;float:B;W:8px">&#9881Zp><div>_l">?GYfloat:B" valueYLogout">ZX>_r">P!b">New p!c">?valueYReset pQ">ZX> Zdiv>Zlabel><ul]padding:0">'
         ) +
       ''.join(
-          c('<li]display:block;border-top:1px solid black;">_et/%s"]^">?style="@" value="&#974%s">Zform><p]^width:calc(100%% - 100px);overflow-wrap:break-word;text-decoration:%s">%sZp>_ed/%s"]^float:right;margin:16px">?style="@" value="x">Zform>Zli>'
+          c('<li]Fblock;border-top:1px solid black;">_et/%s"]^">?GY@" valueY&#974%s">ZX><p]^width:calc(100%% - 100px);overflow-wrap:break-word;text-decoration:%s">%sZp>_ed/%s"]^float:B;W:16px">?GY@" valueYx">ZX>Zli>'
             ) % (k, 4 + int(e[1]), e[1] and 'line-through', e[0], k)
           for k, e in u[2].items()) +
-      c('Zul>_n">[text"]^width:100%;margin-right:-45px;padding-right:45px" name="l">?style="^@" value="+">Zform>'
+      c('Zul>_n">[text"]^width:100%;W-B:-45px;padding-B:45px" nameYl">?GY^@" valueY+">ZX>'
         ))
 
 
@@ -95,23 +98,23 @@ def p(s):
     body, u, p = parse_qs(s.rfile.read(int(
         s.headers.get('Content-Length')))), z(s), s.path
     u, n = u
-    a, b, i = [body.get(c, [b''])[0].decode(d) for c in [b'a', b'b', b'c']]
-    c = err = None
+    a, b, i = [body.get(y, [b''])[0].decode(d) for y in [b'a', b'b', b'c']]
+    y = err = None
     if p[1:3] == 'uL' and (a not in us or not sha.verify(b, us[a][0])):
-        err = 'Username or password incorrect'
+        err = c('A or pQ incorrect')
     if p[1:3] == 'uS':
         if a in us:
-            err = 'Username %s already taken' % (a)
+            err = 'A %s already taken' % (a)
         else:
             us[a] = [sha.encrypt(b, rounds=k, salt_size=16), [], {}]
     if (p[1:3] == 'uL' or p[1:3] == 'uS') and not err:
-        u, c = us[a], x(a)
+        u, y = us[a], x(a)
     if p == '/l':
-        c, c['a'], c['b'] = SimpleCookie(), '', ''
+        y, y['a'], y['b'] = SimpleCookie(), '', ''
     if u and p == '/r':
         if not sha.verify(b, u[0]):
             r(s, 401)
-            return s.wfile.write(b'<p>Password incorrect</p>')
+            return s.wfile.write(bytes(c('<p>PQ incorrect</p>')))
         u[0] = sha.encrypt(i, rounds=k, salt_size=16)
         u[1] = []
     if u and p == '/n':
@@ -133,7 +136,7 @@ def p(s):
                 '%s,%s\n' % (s[0].replace('\n', '\a'), s[1]) for s in u[1]),
              len(u[2].values()),
              ''.join('%s,%s,%s\n' % (e[1], k, e[0]) for k, e in u[2].items())))
-    r(s, 301, c)
+    r(s, 301, y)
 
 
 class H(http.server.BaseHTTPRequestHandler):
