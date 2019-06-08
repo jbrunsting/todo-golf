@@ -52,22 +52,18 @@ def h(s, e=None):
       f.replace('left', 'right').replace('Signup', 'Login'))
 
 
-def c(s, b=0):
-    if b > 5: return s
-    p = [
-        '^', 'display:inline-block;', '@',
-        'background:none;border:none;cursor:pointer', '?',
-        c('[submit" ', b + 1), '_', '<form method="post" action="/', '!',
-        c('assword[password" name="',
-          b + 1), '[', '<input type="', ']', ' style="', 'Z', '</'
-    ]
+def c(s):
+    v = ['[', '<input type="']
+    p = '^|display:inline-block;|@|background:none;border:none;cursor:pointer|?|[submit"|_|<form method="post" action="/|!|assword[password" name="|]| style="|Z|</'.replace(*v[0:2]).split('|') + v
     for i in range(8):
-        s = s.replace(p[i * 2], p[i * 2 + 1])
+        s = s.replace(*p[i * 2:i * 2 + 2])
     return s
 
 
-def r(s, c):
+def r(s, c, k=''):
     s.send_response(c)
+    k and s.send_header('Set-Cookie', k.output(header='', sep=''))
+    k != '' and s.send_header('Location', '/')
     s.end_headers()
 
 
@@ -81,12 +77,9 @@ def g(s):
       c('<style>input:checked~div{display:block}div{display:none}input{display:block}Zstyle><label>[checkbox"]display:none"/><h2]^margin:0">TODOZh2><p]cursor:pointer;float:right;margin:8px">&#9881Zp><div>_l">?style="float:right" value="Logout">Zform>_r">P!b">New p!c">?value="Reset password">Zform> Zdiv>Zlabel><ul]padding:0">'
         ) +
       ''.join(
-          c('<li]display:block;border-top:1px solid black;">_et/') + k +
-          c('"]^">?style="@" value="&#974') + str(4 + int(e[1])) +
-          c('">Zform><p]^width:calc(100% - 100px);overflow-wrap:break-word;text-decoration:'
-            ) + ('line-through' if e[1] else '') + '">' + e[0] + c('Zp>_ed/') +
-          k + c('"]^float:right;margin:16px">?style="@" value="x">Zform>') +
-          '</li>' for k, e in u[2].items()) +
+          c('<li]display:block;border-top:1px solid black;">_et/%s"]^">?style="@" value="&#974%s">Zform><p]^width:calc(100%% - 100px);overflow-wrap:break-word;text-decoration:%s">%sZp>_ed/%s"]^float:right;margin:16px">?style="@" value="x">Zform>Zli>'
+            ) % (k, 4 + int(e[1]), e[1] and 'line-through', e[0], k)
+          for k, e in u[2].items()) +
       c('Zul>_n">[text"]^width:100%;margin-right:-45px;padding-right:45px" name="l">?style="^@" value="+">Zform>'
         ))
 
@@ -104,14 +97,14 @@ def p(s):
     u, n = u
     a, b, i = [body.get(c, [b''])[0].decode(d) for c in [b'a', b'b', b'c']]
     c = err = None
-    if p[1:2] == 'uL' and (a not in us or not sha.verify(b, us[a][0])):
+    if p[1:3] == 'uL' and (a not in us or not sha.verify(b, us[a][0])):
         err = 'Username or password incorrect'
-    if p[1:2] == 'uS':
+    if p[1:3] == 'uS':
         if a in us:
             err = 'Username %s already taken' % (a)
         else:
             us[a] = [sha.encrypt(b, rounds=k, salt_size=16), [], {}]
-    if p[1:2] == 'u' and not err:
+    if (p[1:3] == 'uL' or p[1:3] == 'uS') and not err:
         u, c = us[a], x(a)
     if p == '/l':
         c, c['a'], c['b'] = SimpleCookie(), '', ''
@@ -140,10 +133,7 @@ def p(s):
                 '%s,%s\n' % (s[0].replace('\n', '\a'), s[1]) for s in u[1]),
              len(u[2].values()),
              ''.join('%s,%s,%s\n' % (e[1], k, e[0]) for k, e in u[2].items())))
-    s.send_response(301)
-    c and s.send_header('Set-Cookie', c.output(header='', sep=''))
-    s.send_header('Location', '/')
-    s.end_headers()
+    r(s, 301, c)
 
 
 class H(http.server.BaseHTTPRequestHandler):
