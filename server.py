@@ -25,28 +25,30 @@ def g(s):
 	u,a=z(s)
 	r(s,200)
 	if not u:return h(s)
-	w(s,c('<G>I:checked~div{F`}div{Fnone}I{F`}ZG><label>[checkbox"]Fnone"/><h2]^W:0">HZh2><p]M;$B;W:8px">&#9881Zp><div>_l">?GY$B" CYLogout">ZX>_r">P!b">New p!c">?CYReset pQ">ZX> Zdiv>Zlabel><ul]padding:0">')+''.join(c('<li]F`;border-top:1px solid black;">_et/K"]^">?GY@" CY&#974K">ZX><p]^width:calc(100%% - 100px);overflow-wrap:break-word;text-decoration:K">KZp>_ed/K"]^$B;W:16px">?GY@" CYx">ZX>Zli>')%(k,4+int(e[1]),e[1]and'line-through',e[0],k)for k,e in u[2].items())+c('Zul>_n">[text"]^width:100%;W-B:-45px;padding-B:45px" JYl">?GY^@" CY+">ZX>'))
+	w(s,c('<G>I:checked~div{F`}div{Fnone}I{F`}ZG><label>[checkbox"]Fnone"/><h2]^W:0">HZh2><p]M;$B;W:8px">&#9881Zp><div>_l">?GY$B" CYLogout">ZX>_r">P!b">New p!c">?CYReset pQ">ZX> Zdiv>Zlabel><ul]padding:0">')+''.join(c('<li]F`;border-top:1px solid black;">_etK"]^">?GY@" CY&#974K">ZX><p]^width:calc(100%% - 100px);overflow-wrap:break-word;text-decoration:K">KZp>_edK"]^$B;W:16px">?GY@" CYx">ZX>Zli>')%(k,4+int(e[1]),e[1]and'line-through',e[0],k)for k,e in u[2].items())+c('Zul>_n">[text"]^width:100%;W-B:-45px;padding-B:45px" JYl">?GY^@" CY+">ZX>'))
 def p(s):
 	o,u,p=urllib.parse.parse_qs(s.rfile.read(int(s.headers.get('Content-Length')))),z(s),s.path
 	u,n=u
 	a,b,i=[o.get(y,[b''])[0].decode(d)for y in [b'a',b'b',b'c']]
-	a=a.translate({ord('.'):'',ord('/'):''})
+	a=a.replace('.','').replace('/','')
 	y=e=None
 	if p[1:3]=='uL':
 		if not(a in j and q.verify(b,j[a][0])):e=c('A or pQ incorrect')
 	elif p[1:2]=='u':
 		if a in j:e='A %s already taken'%(a)
 		else:j[a]=[q.encrypt(b,rounds=k,salt_size=16),[],{}]
-	if p[1:2]=='u'and not e:t=secrets.token_urlsafe();j[a][1].append((t,l()+7**8));y,y['a'],y['b'],u=v(),a,t,j[a]
+	if e:return r(s,200)or h(s,e)
+	if p[1:2]=='u':t=secrets.token_urlsafe();j[a][1].append((t,l()+7**8));y,y['a'],y['b'],u=v(),a,t,j[a]
 	if p=='/l':y,y['a'],y['b']=v(),'',''
-	if u and p=='/r':
+	if p=='/r':
 		if not q.verify(b,u[0]):return r(s,401)or w(s,c('<p>PQ incorrectZp>'))
 		u[0:2]=[q.encrypt(i,rounds=k,salt_size=16),[]]
-	if u and p=='/n':u[2][str(uuid.uuid4())]=[o[b'l'][0].decode(d),False]
-	if u and p[1:2]=='e':
-		id=p.split('/',2)[2];u[2][id][1]=not u[2][id][1]
-		if p[2:3]=='d':del u[2][id]
-	if e:return r(s,200)or h(s,e)
+	if p=='/n':u[2][str(uuid.uuid4())]=[o[b'l'][0].decode(d),False]
+	if p[1:2]=='e':
+		i=p[3:]
+		if i not in u[2]:return r(s,404)
+		u[2][i][1]=u[2][i][1]<1
+		if p[2:3]=='d':del u[2][i]
 	f=open((a or n)+'.u','w+')
 	f.write(u[0]+'\n')
 	u[1]=[s for s in u[1]if s[1]>l()]
