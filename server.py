@@ -10,8 +10,7 @@ m=lambda:range(int(x(0)))
 for n in os.listdir('.'):
 	if n[-2:]=='.u':f=open(n,'r');j[n[:-2]]=[x(0),[(x(0).replace('\a','\n'),float(s[0][1]))for i in m()],{s[0][1]:[x(2),s[0][0]=='True']for i in m()}]
 def c(s,b=0):
-	if b>5:return s
-	for e in zip('ABCEFGHIJKMQVWXYZjqz[]?@$`^_*!',c('Wblock;Winline-bloc|background:Y*:Y;cursor:pointerJ|<form method="post"action="|<[H|float:?;Z:|assword| `="|"$/form$/|qsubmit"value="|Username|Signup|qpG]|width:calc(|display:|%s|none|margin|>TODO</|"type="|div|input|"name="|right|padding|><|style|G incorrect|HAk;|;border|">',b +1).split('|')):s=s.replace(*e)
+	for e in zip('ABCEFGHIJKMQVWXYZjqz[]?@$`^_*!',(b>5 and' ')or c('Wblock;Winline-bloc|background:Y*:Y;cursor:pointerJ|<form method="post"action="|<[H|float:?;Z:|assword| `="|"$/form$/|qsubmit"value="|Username|Signup|qpG]|width:calc(|display:|%s|none|margin|>TODO</|"type="|div|input|"name="|right|padding|><|style|G incorrect|HAk;|;border|">',b +1).split('|')):s=s.replace(*e)
 	return s
 def r(s,b,x=200,k=''):h=s.send_header;s.send_response(x);k and h('Set-Cookie',k.output(header='',sep=''));k!=''and h('Location','/');s.end_headers();b and s.wfile.write(bytes(c('<titlejtitle$bodyHmax-V800px);Z:auto;@:16px!%s</body>'%b),d))
 def p(s,e):
@@ -27,7 +26,7 @@ def p(s,e):
 	if p[1:3]=='uL':
 		if not(a in j and q.verify(b,j[a][0])):e=c('K or p^')
 	elif x=='u':
-		if a in j:e='K %s already taken'%(a)
+		if a in j:e=c('K X already taken')%(a)
 		else:j[a]=[q.encrypt(b,rounds=k,salt_size=16),[],{}]
 	elif not u:e=' '
 	f=c('CuM"Hfloat:left!KEA]a!PGEAQb!EJMI>')
