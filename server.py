@@ -12,7 +12,7 @@ for n in os.listdir('.'):
 def c(s,b=0):
 	for e in zip('ABCEFGHIJKMQVWXYZjqz[]?@$`^_*!',(b>5 and' ')or c('Wblock;Winline-bloc|background:Y*:Y;cursor:pointerJ|<form method="post"action="|<[H|float:?;Z:|assword| `="|"$/form$/|qsubmit"value="|Username|Signup|qpG]|width:calc(|display:|%s|none|margin|>TODO</|"type="|div|input|"name="|right|padding|><|style|G incorrect|HAk;|;border|">',b +1).split('|')):s=s.replace(*e)
 	return s
-def r(s,b,x=200,k=''):h=s.send_header;s.send_response(x);k and h('Set-Cookie',k.output(header='',sep=''));k!=''and h('Location','/');s.end_headers();b and s.wfile.write(bytes(c('<titlejtitle$bodyHmax-V800px);Z:auto;@:16px!%s</body>'%b),d))
+def r(s,b,x=200,k=''):h=s.send_header;s.send_response(x);k and h('Set-Cookie',k.output(header='',sep=''));k!=''and h('Location','/');s.end_headers();b and s.wfile.write(bytes(c('<titlejtitle$bodyHmax-V800px);Z:auto;@:16px!X</body>')%b,d))
 def p(s,e):
 	u,n='',''
 	w=s.headers.get
